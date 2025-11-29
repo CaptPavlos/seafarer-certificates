@@ -5,7 +5,6 @@ import {
   Award, 
   Shield, 
   User, 
-  Calendar,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -16,28 +15,19 @@ import {
   Ship,
   Compass,
   BookOpen,
-  Check,
   Square,
   CheckSquare,
   Lock,
-  LogOut,
   Eye,
   EyeOff,
-  Edit3,
-  Save,
   Download,
-  Trash2,
   RefreshCw
 } from 'lucide-react'
 import { certificates, categories, getStats } from './data/certificates'
 
-// Local storage keys
+// Local storage keys - only checkmarks are saved locally
 const STORAGE_KEY = 'seafarer-certificates-checked'
-const AUTH_KEY = 'seafarer-certificates-auth'
-const CERT_DATA_KEY = 'seafarer-certificates-data'
-const DELETED_KEY = 'seafarer-certificates-deleted'
 const ACCESS_KEY = 'seafarer-certificates-access'
-const PASSWORD = 'Marsoft'
 const ACCESS_PASSWORD = 'HelpingMyAgent'
 
 // Check if user has access (viewed disclaimer)
@@ -62,32 +52,13 @@ const setAccess = (value) => {
   }
 }
 
-// Load deleted certificates from localStorage
-const loadDeletedCerts = () => {
-  try {
-    const saved = localStorage.getItem(DELETED_KEY)
-    return saved ? JSON.parse(saved) : []
-  } catch {
-    return []
-  }
-}
-
-// Save deleted certificates to localStorage
-const saveDeletedCerts = (deleted) => {
-  try {
-    localStorage.setItem(DELETED_KEY, JSON.stringify(deleted))
-  } catch (e) {
-    console.error('Failed to save deleted certs:', e)
-  }
-}
-
 // Calculate dynamic status based on dates
-const calculateStatus = (cert, overrides = {}) => {
+const calculateStatus = (cert) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
-  const expiryDate = overrides.expiryDate ?? cert.expiryDate
-  const issuanceDate = overrides.issuanceDate ?? cert.issuanceDate
+  const expiryDate = cert.expiryDate
+  const issuanceDate = cert.issuanceDate
   
   // Check if expired
   if (expiryDate) {
@@ -141,43 +112,8 @@ const saveCheckedState = (state) => {
   }
 }
 
-// Load certificate data overrides from localStorage
-const loadCertDataOverrides = () => {
-  try {
-    const saved = localStorage.getItem(CERT_DATA_KEY)
-    return saved ? JSON.parse(saved) : {}
-  } catch {
-    return {}
-  }
-}
-
-// Save certificate data overrides to localStorage
-const saveCertDataOverrides = (data) => {
-  try {
-    localStorage.setItem(CERT_DATA_KEY, JSON.stringify(data))
-  } catch (e) {
-    console.error('Failed to save cert data:', e)
-  }
-}
-
-// Check if user is authenticated for editing
-// Edit mode is session-based only - does not persist across page reloads
-const isAuthenticated = () => {
-  return false // Always start locked - user must enter password each session
-}
-
-// Set authentication state
-const setAuthenticated = (value) => {
-  try {
-    if (value) {
-      localStorage.setItem(AUTH_KEY, 'true')
-    } else {
-      localStorage.removeItem(AUTH_KEY)
-    }
-  } catch (e) {
-    console.error('Failed to save auth state:', e)
-  }
-}
+// Edit mode is disabled - certificate data is read-only from source
+// To make changes, update certificates.js directly and redeploy
 
 // Category icons mapping
 const categoryIcons = {
@@ -336,140 +272,13 @@ const AccessGate = ({ onGrantAccess }) => {
   )
 }
 
-// Password Gate Component
-const PasswordGate = ({ onAuthenticate }) => {
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
-  
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (password === PASSWORD) {
-      onAuthenticate()
-    } else {
-      setError('Incorrect password')
-      setPassword('')
-    }
-  }
-  
-  return (
-    <div className="p-8">
-      <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4">
-          <Lock size={28} className="text-blue-600" />
-        </div>
-        <h2 className="text-xl font-bold text-gray-900">Enter Edit Mode</h2>
-        <p className="text-gray-500 mt-1 text-sm">Enter password to edit certificate data</p>
-      </div>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Password
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError('') }}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-900"
-              placeholder="Enter password"
-              autoFocus
-              autoComplete="current-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
-          </div>
-          {error && (
-            <p className="mt-2 text-sm text-red-600">{error}</p>
-          )}
-        </div>
-        
-        <button
-          type="submit"
-          className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
-          Unlock Edit Mode
-        </button>
-      </form>
-    </div>
-  )
-}
 
-// Certificate detail modal with editing
-const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertData, onDeleteCert, isEditMode, onRequestEdit }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [editData, setEditData] = useState({
-    name: '',
-    certNumber: '',
-    issuanceDate: '',
-    expiryDate: ''
-  })
-  
-  // Handle edit button click - requires authentication
-  const handleEditClick = () => {
-    if (isEditMode) {
-      setIsEditing(true)
-    } else {
-      onRequestEdit()
-    }
-  }
-  
-  // Get merged data (original + overrides)
-  const getMergedData = () => {
-    if (!certificate) return null
-    const overrides = certDataOverrides[certificate.id] || {}
-    return {
-      ...certificate,
-      name: overrides.name ?? certificate.name,
-      certNumber: overrides.certNumber ?? certificate.certNumber,
-      issuanceDate: overrides.issuanceDate ?? certificate.issuanceDate,
-      expiryDate: overrides.expiryDate ?? certificate.expiryDate
-    }
-  }
-  
-  const mergedCert = getMergedData()
-  
-  // Calculate dynamic status
-  const dynamicStatus = certificate ? calculateStatus(certificate, certDataOverrides[certificate.id] || {}) : 'valid'
-  
-  // Initialize edit form when opening
-  useEffect(() => {
-    if (certificate && isEditing) {
-      const overrides = certDataOverrides[certificate.id] || {}
-      setEditData({
-        name: overrides.name ?? certificate.name ?? '',
-        certNumber: overrides.certNumber ?? certificate.certNumber ?? '',
-        issuanceDate: overrides.issuanceDate ?? certificate.issuanceDate ?? '',
-        expiryDate: overrides.expiryDate ?? certificate.expiryDate ?? ''
-      })
-    }
-  }, [certificate, isEditing, certDataOverrides])
-  
-  const handleSave = () => {
-    onSaveCertData(certificate.id, {
-      name: editData.name !== certificate.name ? editData.name : undefined,
-      certNumber: editData.certNumber || undefined,
-      issuanceDate: editData.issuanceDate || undefined,
-      expiryDate: editData.expiryDate || undefined
-    })
-    setIsEditing(false)
-  }
-  
-  const handleDelete = () => {
-    onDeleteCert(certificate.id)
-    onClose()
-  }
-  
-  if (!certificate || !mergedCert) return null
+// Certificate detail modal - View Only
+const CertificateModal = ({ certificate, onClose }) => {
+  if (!certificate) return null
   
   const Icon = categoryIcons[certificate.category] || FileText
+  const dynamicStatus = calculateStatus(certificate)
   
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
@@ -484,135 +293,45 @@ const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertD
                 <Icon size={24} />
               </div>
               <div className="flex-1">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.name}
-                    onChange={(e) => setEditData({...editData, name: e.target.value})}
-                    className="text-xl font-bold text-gray-900 w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                  />
-                ) : (
-                  <h2 className="text-xl font-bold text-gray-900">{mergedCert.name}</h2>
-                )}
+                <h2 className="text-xl font-bold text-gray-900">{certificate.name}</h2>
                 <p className="text-gray-500">{certificate.issuer}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {!isEditing ? (
-                <>
-                  <button 
-                    onClick={handleEditClick}
-                    className={`p-2 rounded-lg transition-colors ${isEditMode ? 'hover:bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                    title={isEditMode ? "Edit certificate data" : "Login to edit"}
-                  >
-                    {isEditMode ? <Edit3 size={20} /> : <Lock size={20} />}
-                  </button>
-                  {isEditMode && (
-                    <button 
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                      title="Delete certificate"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button 
-                  onClick={handleSave}
-                  className="p-2 hover:bg-emerald-100 rounded-lg transition-colors text-emerald-600"
-                  title="Save changes"
-                >
-                  <Save size={20} />
-                </button>
-              )}
-              <button 
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-400" />
-              </button>
-            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X size={20} className="text-gray-400" />
+            </button>
           </div>
         </div>
         
-        {/* Delete confirmation */}
-        {showDeleteConfirm && (
-          <div className="p-4 bg-red-50 border-b border-red-100">
-            <p className="text-red-700 font-medium mb-3">Are you sure you want to delete this certificate?</p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        )}
-        
         <div className="p-6 space-y-4">
-          {/* Editable Fields */}
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-500 mb-1">Certificate Number</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editData.certNumber}
-                  onChange={(e) => setEditData({...editData, certNumber: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900"
-                  placeholder="Enter certificate number"
-                />
-              ) : (
-                <p className="font-medium text-gray-900 font-mono">
-                  {mergedCert.certNumber || <span className="text-gray-400 italic">Not set</span>}
-                </p>
-              )}
+              <p className="font-medium text-gray-900 font-mono">
+                {certificate.certNumber || <span className="text-gray-400 italic">Not set</span>}
+              </p>
             </div>
             
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Issuance Date</label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={editData.issuanceDate}
-                    onChange={(e) => setEditData({...editData, issuanceDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">
-                    {mergedCert.issuanceDate ? formatDate(mergedCert.issuanceDate) : <span className="text-gray-400 italic">Not set</span>}
-                  </p>
-                )}
+                <p className="font-medium text-gray-900">
+                  {certificate.issuanceDate ? formatDate(certificate.issuanceDate) : <span className="text-gray-400 italic">Not set</span>}
+                </p>
               </div>
               
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Expiry Date</label>
-                {isEditing ? (
-                  <input
-                    type="date"
-                    value={editData.expiryDate}
-                    onChange={(e) => setEditData({...editData, expiryDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-900"
-                  />
-                ) : (
-                  <p className="font-medium text-gray-900">
-                    {mergedCert.expiryDate ? formatDate(mergedCert.expiryDate) : <span className="text-gray-400 italic">Not set</span>}
-                  </p>
-                )}
+                <p className="font-medium text-gray-900">
+                  {certificate.expiryDate ? formatDate(certificate.expiryDate) : <span className="text-gray-400 italic">Not set</span>}
+                </p>
               </div>
             </div>
           </div>
           
-          {/* Non-editable info */}
           <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Category</p>
@@ -636,33 +355,15 @@ const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertD
               )}
             </div>
           </div>
-          
         </div>
         
         <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-          {isEditing ? (
-            <div className="flex gap-3">
-              <button
-                onClick={() => setIsEditing(false)}
-                className="flex-1 py-2.5 px-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="flex-1 py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Save Changes
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 px-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
-            >
-              Close
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 px-4 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -716,66 +417,24 @@ const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
 
 function App() {
   const [hasUserAccess, setHasUserAccess] = useState(hasAccess)
-  const [isEditMode, setIsEditMode] = useState(isAuthenticated)
-  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedCertificate, setSelectedCertificate] = useState(null)
   const [checkedCerts, setCheckedCerts] = useState(loadCheckedState)
-  const [certDataOverrides, setCertDataOverrides] = useState(loadCertDataOverrides)
-  const [deletedCerts, setDeletedCerts] = useState(loadDeletedCerts)
   
-  // Save to localStorage whenever checked state changes
+  // Save to localStorage whenever checked state changes (only checkmarks are saved locally)
   useEffect(() => {
     saveCheckedState(checkedCerts)
   }, [checkedCerts])
   
-  // Save certificate data overrides to localStorage
-  useEffect(() => {
-    saveCertDataOverrides(certDataOverrides)
-  }, [certDataOverrides])
-  
-  // Save deleted certs to localStorage
-  useEffect(() => {
-    saveDeletedCerts(deletedCerts)
-  }, [deletedCerts])
-  
-  // Handle saving certificate data
-  const handleSaveCertData = (certId, data) => {
-    setCertDataOverrides(prev => ({
-      ...prev,
-      [certId]: { ...prev[certId], ...data }
-    }))
-  }
-  
-  // Handle deleting a certificate
-  const handleDeleteCert = (certId) => {
-    setDeletedCerts(prev => [...prev, certId])
-  }
-  
-  // Get merged certificate data (original + overrides)
-  const getMergedCertData = (cert) => {
-    const overrides = certDataOverrides[cert.id] || {}
-    return {
-      ...cert,
-      name: overrides.name ?? cert.name,
-      certNumber: overrides.certNumber ?? cert.certNumber,
-      issuanceDate: overrides.issuanceDate ?? cert.issuanceDate,
-      expiryDate: overrides.expiryDate ?? cert.expiryDate
-    }
-  }
-  
   // Get dynamic status for a certificate
   const getDynamicStatus = (cert) => {
-    const overrides = certDataOverrides[cert.id] || {}
-    return calculateStatus(cert, overrides)
+    return calculateStatus(cert)
   }
   
-  // Active certificates (not deleted)
-  const activeCertificates = useMemo(() => {
-    return certificates.filter(cert => !deletedCerts.includes(cert.id))
-  }, [deletedCerts])
+  // All certificates from source (no local filtering)
+  const activeCertificates = certificates
   
   // Calculate stats dynamically
   const stats = useMemo(() => {
@@ -791,27 +450,26 @@ function App() {
     })
     
     return { total, valid, expiring, expired, renewalSuggested }
-  }, [activeCertificates, certDataOverrides])
+  }, [activeCertificates])
   
   // Filter certificates - must be before conditional return
   const filteredCertificates = useMemo(() => {
     return activeCertificates.filter(cert => {
-      const merged = getMergedCertData(cert)
       const dynamicStatus = getDynamicStatus(cert)
       
       const matchesSearch = searchQuery === '' || 
-        merged.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cert.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cert.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (cert.subcategory && cert.subcategory.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (merged.certNumber && merged.certNumber.toLowerCase().includes(searchQuery.toLowerCase()))
+        (cert.certNumber && cert.certNumber.toLowerCase().includes(searchQuery.toLowerCase()))
       
       const matchesCategory = selectedCategory === '' || cert.category === selectedCategory
       const matchesStatus = selectedStatus === '' || dynamicStatus === selectedStatus
       
       return matchesSearch && matchesCategory && matchesStatus
     })
-  }, [searchQuery, selectedCategory, selectedStatus, activeCertificates, certDataOverrides])
+  }, [searchQuery, selectedCategory, selectedStatus, activeCertificates])
   
   // Group certificates by category - must be before conditional return
   const groupedCertificates = useMemo(() => {
@@ -824,19 +482,6 @@ function App() {
     })
     return groups
   }, [filteredCertificates])
-  
-  // Handle logout (exit edit mode)
-  const handleLogout = () => {
-    setAuthenticated(false)
-    setIsEditMode(false)
-  }
-  
-  // Handle login for edit mode
-  const handleLogin = () => {
-    setAuthenticated(true)
-    setIsEditMode(true)
-    setShowPasswordPrompt(false)
-  }
   
   // Toggle checkbox
   const toggleChecked = (certId) => {
@@ -860,13 +505,12 @@ function App() {
     const headers = ['Category', 'Certificate Name', 'Certificate Number', 'Issuer', 'Issue Date', 'Expiry Date', 'Status', 'Checked']
     
     const rows = activeCertificates.map(cert => {
-      const merged = getMergedCertData(cert)
       const dynamicStatus = getDynamicStatus(cert)
       
       // Calculate 5-year expiry for STCW certs without expiry
-      let displayExpiry = merged.expiryDate
-      if (cert.category === 'STCW' && !merged.expiryDate && merged.issuanceDate) {
-        const issued = new Date(merged.issuanceDate)
+      let displayExpiry = cert.expiryDate
+      if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
+        const issued = new Date(cert.issuanceDate)
         const fiveYearsLater = new Date(issued)
         fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
         displayExpiry = fiveYearsLater.toISOString().split('T')[0] + ' (5yr unofficial)'
@@ -874,10 +518,10 @@ function App() {
       
       return [
         cert.category,
-        merged.name,
-        merged.certNumber || '',
+        cert.name,
+        cert.certNumber || '',
         cert.issuer,
-        merged.issuanceDate ? formatDate(merged.issuanceDate) : '',
+        cert.issuanceDate ? formatDate(cert.issuanceDate) : '',
         displayExpiry ? formatDate(displayExpiry) : '',
         dynamicStatus === 'renewal-suggested' ? 'Consider Renewal' : dynamicStatus,
         checkedCerts[cert.id] ? 'Yes' : 'No'
@@ -933,25 +577,6 @@ function App() {
                 <Download size={16} />
                 <span className="hidden sm:inline">Export</span>
               </button>
-              {isEditMode ? (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
-                  title="Exit edit mode"
-                >
-                  <Lock size={16} />
-                  <span className="hidden sm:inline">Editing</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowPasswordPrompt(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Login to edit"
-                >
-                  <Lock size={16} />
-                  <span className="hidden sm:inline">Edit Mode</span>
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -1065,14 +690,13 @@ function App() {
                         {/* Certificate Rows */}
                         {certs.map(cert => {
                           const isChecked = checkedCerts[cert.id] || false
-                          const mergedCert = getMergedCertData(cert)
                           const dynamicStatus = getDynamicStatus(cert)
                           
                           // Calculate 5-year expiry for STCW certs without expiry
-                          let displayExpiry = mergedCert.expiryDate
+                          let displayExpiry = cert.expiryDate
                           let isUnofficialExpiry = false
-                          if (cert.category === 'STCW' && !mergedCert.expiryDate && mergedCert.issuanceDate) {
-                            const issued = new Date(mergedCert.issuanceDate)
+                          if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
+                            const issued = new Date(cert.issuanceDate)
                             const fiveYearsLater = new Date(issued)
                             fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
                             displayExpiry = fiveYearsLater.toISOString().split('T')[0]
@@ -1098,7 +722,7 @@ function App() {
                               </td>
                               <td className="px-4 py-3">
                                 <div>
-                                  <p className="font-medium text-gray-900">{mergedCert.name}</p>
+                                  <p className="font-medium text-gray-900">{cert.name}</p>
                                   {cert.subcategory && (
                                     <p className="text-xs text-gray-500 mt-0.5">{cert.subcategory}</p>
                                   )}
@@ -1106,12 +730,12 @@ function App() {
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-sm text-gray-600 font-mono">
-                                  {mergedCert.certNumber || '—'}
+                                  {cert.certNumber || '—'}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
                                 <span className="text-sm text-gray-600">
-                                  {formatDate(mergedCert.issuanceDate)}
+                                  {formatDate(cert.issuanceDate)}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
@@ -1164,28 +788,11 @@ function App() {
         )}
       </main>
 
-      {/* Certificate Modal */}
+      {/* Certificate Modal - View Only */}
       <CertificateModal 
         certificate={selectedCertificate} 
         onClose={() => setSelectedCertificate(null)}
-        certDataOverrides={certDataOverrides}
-        onSaveCertData={handleSaveCertData}
-        onDeleteCert={handleDeleteCert}
-        isEditMode={isEditMode}
-        onRequestEdit={() => setShowPasswordPrompt(true)}
       />
-      
-      {/* Password Prompt Modal */}
-      {showPasswordPrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowPasswordPrompt(false)}>
-          <div 
-            className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
-            <PasswordGate onAuthenticate={handleLogin} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }
