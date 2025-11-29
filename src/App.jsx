@@ -184,10 +184,10 @@ const saveNotes = (notes) => {
 
 // Category icons mapping
 const categoryIcons = {
+  'General': FileText,
   'CoC & Endorsements': Award,
   'STCW': Shield,
   'Non-STCW': Compass,
-  'Medical': FileText,
   'Identity Documents': User
 }
 
