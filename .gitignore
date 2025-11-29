@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Scripts with API keys and sensitive data
+scripts/
+src/data/ocr-output/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

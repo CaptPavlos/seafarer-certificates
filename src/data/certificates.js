@@ -282,7 +282,7 @@ export const certificates = [
     path: "Certificates/STCW/STCW 95_ LSA-FFE-Fast Rescue.pdf",
     certNumber: "93023",
     issuanceDate: "2018-04-26",
-    expiryDate: null,
+    expiryDate: "2026-03-01",
     status: "valid"
   },
   {
