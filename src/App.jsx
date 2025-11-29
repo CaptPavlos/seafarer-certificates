@@ -95,10 +95,10 @@ const calculateStatus = (cert, overrides = {}) => {
     if (expiry < today) {
       return 'expired'
     }
-    // Check if expiring within 90 days
-    const ninetyDaysFromNow = new Date(today)
-    ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90)
-    if (expiry <= ninetyDaysFromNow) {
+    // Check if expiring within 6 months (approx 182 days)
+    const sixMonthsFromNow = new Date(today)
+    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
+    if (expiry <= sixMonthsFromNow) {
       return 'expiring'
     }
   }
@@ -111,10 +111,10 @@ const calculateStatus = (cert, overrides = {}) => {
     if (fiveYearsLater < today) {
       return 'renewal-suggested'
     }
-    // Check if within 90 days of 5-year mark
-    const ninetyDaysFromNow = new Date(today)
-    ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90)
-    if (fiveYearsLater <= ninetyDaysFromNow) {
+    // Check if within 6 months of 5-year mark
+    const sixMonthsFromNow = new Date(today)
+    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
+    if (fiveYearsLater <= sixMonthsFromNow) {
       return 'renewal-suggested'
     }
   }
