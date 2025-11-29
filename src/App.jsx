@@ -21,14 +21,22 @@ import {
   Eye,
   EyeOff,
   Download,
-  RefreshCw
+  RefreshCw,
+  Flag,
+  MessageSquare,
+  Info
 } from 'lucide-react'
 import { certificates, categories, getStats } from './data/certificates'
 
-// Local storage keys - only checkmarks are saved locally
+// Local storage keys - checkmarks, flags, and notes are saved locally
 const STORAGE_KEY = 'seafarer-certificates-checked'
+const FLAGS_KEY = 'seafarer-certificates-flags'
+const NOTES_KEY = 'seafarer-certificates-notes'
 const ACCESS_KEY = 'seafarer-certificates-access'
 const ACCESS_PASSWORD = 'HelpingMyAgent'
+
+// Certificates that need annual renewal (IAATO, AECO, Svalbard)
+const ANNUAL_RENEWAL_CERTS = ['IAATO', 'AECO', 'Svalbard']
 
 // Check if user has access (viewed disclaimer)
 const hasAccess = () => {
@@ -50,6 +58,11 @@ const setAccess = (value) => {
   } catch (e) {
     console.error('Failed to save access state:', e)
   }
+}
+
+// Check if certificate needs annual renewal (IAATO, AECO, Svalbard)
+const needsAnnualRenewal = (cert) => {
+  return ANNUAL_RENEWAL_CERTS.some(name => cert.name.includes(name))
 }
 
 // Calculate dynamic status based on dates
@@ -74,8 +87,24 @@ const calculateStatus = (cert) => {
     }
   }
   
+  // For IAATO, AECO, Svalbard - check 1-year renewal from issuance
+  if (needsAnnualRenewal(cert) && issuanceDate) {
+    const issued = new Date(issuanceDate)
+    const oneYearLater = new Date(issued)
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
+    if (oneYearLater < today) {
+      return 'renewal-suggested'
+    }
+    // Check if within 2 months of 1-year mark
+    const twoMonthsFromNow = new Date(today)
+    twoMonthsFromNow.setDate(twoMonthsFromNow.getDate() + 60)
+    if (oneYearLater <= twoMonthsFromNow) {
+      return 'renewal-suggested'
+    }
+  }
+  
   // For STCW certs without expiry, check 5-year unofficial expiry
-  if (cert.category === 'STCW' && !expiryDate && issuanceDate) {
+  if (cert.category === 'STCW' && !expiryDate && issuanceDate && !needsAnnualRenewal(cert)) {
     const issued = new Date(issuanceDate)
     const fiveYearsLater = new Date(issued)
     fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
@@ -112,7 +141,45 @@ const saveCheckedState = (state) => {
   }
 }
 
-// Edit mode is disabled - certificate data is read-only from source
+// Load flags from localStorage
+const loadFlags = () => {
+  try {
+    const saved = localStorage.getItem(FLAGS_KEY)
+    return saved ? JSON.parse(saved) : {}
+  } catch {
+    return {}
+  }
+}
+
+// Save flags to localStorage
+const saveFlags = (flags) => {
+  try {
+    localStorage.setItem(FLAGS_KEY, JSON.stringify(flags))
+  } catch (e) {
+    console.error('Failed to save flags:', e)
+  }
+}
+
+// Load notes from localStorage
+const loadNotes = () => {
+  try {
+    const saved = localStorage.getItem(NOTES_KEY)
+    return saved ? JSON.parse(saved) : {}
+  } catch {
+    return {}
+  }
+}
+
+// Save notes to localStorage
+const saveNotes = (notes) => {
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes))
+  } catch (e) {
+    console.error('Failed to save notes:', e)
+  }
+}
+
+// Certificate data is read-only from source
 // To make changes, update certificates.js directly and redeploy
 
 // Category icons mapping
@@ -273,44 +340,63 @@ const AccessGate = ({ onGrantAccess }) => {
 }
 
 
-// Certificate detail modal - View Only
-const CertificateModal = ({ certificate, onClose }) => {
+// Certificate detail modal - View Only with Flag and Note
+const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag, onUpdateNote }) => {
+  const [localNote, setLocalNote] = useState(note || '')
+  
+  useEffect(() => {
+    setLocalNote(note || '')
+  }, [note, certificate])
+  
   if (!certificate) return null
   
   const Icon = categoryIcons[certificate.category] || FileText
   const dynamicStatus = calculateStatus(certificate)
   
+  const handleSaveNote = () => {
+    onUpdateNote(certificate.id, localNote)
+  }
+  
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-2 sm:p-4 z-50" onClick={onClose}>
       <div 
         className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-auto shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-100">
+        <div className="p-4 sm:p-6 border-b border-gray-100">
           <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
-                <Icon size={24} />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-xl bg-blue-100 text-blue-600">
+                <Icon size={20} className="sm:w-6 sm:h-6" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-gray-900">{certificate.name}</h2>
-                <p className="text-gray-500">{certificate.issuer}</p>
+                <h2 className="text-base sm:text-xl font-bold text-gray-900">{certificate.name}</h2>
+                <p className="text-sm text-gray-500">{certificate.issuer}</p>
               </div>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X size={20} className="text-gray-400" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => onToggleFlag(certificate.id)}
+                className={`p-2 rounded-lg transition-colors ${isFlagged ? 'text-orange-500 bg-orange-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                title={isFlagged ? "Remove flag" : "Flag certificate"}
+              >
+                <Flag size={18} fill={isFlagged ? 'currentColor' : 'none'} />
+              </button>
+              <button 
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
         
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4">
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-500 mb-1">Certificate Number</label>
-              <p className="font-medium text-gray-900 font-mono">
+              <p className="font-medium text-gray-900 font-mono text-sm sm:text-base">
                 {certificate.certNumber || <span className="text-gray-400 italic">Not set</span>}
               </p>
             </div>
@@ -318,34 +404,49 @@ const CertificateModal = ({ certificate, onClose }) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Issuance Date</label>
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-gray-900 text-sm sm:text-base">
                   {certificate.issuanceDate ? formatDate(certificate.issuanceDate) : <span className="text-gray-400 italic">Not set</span>}
                 </p>
               </div>
               
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Expiry Date</label>
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-gray-900 text-sm sm:text-base">
                   {certificate.expiryDate ? formatDate(certificate.expiryDate) : <span className="text-gray-400 italic">Not set</span>}
                 </p>
               </div>
             </div>
           </div>
           
+          {/* Note Section */}
+          <div className="pt-4 border-t border-gray-100">
+            <label className="block text-sm text-gray-500 mb-2 flex items-center gap-1">
+              <MessageSquare size={14} /> Personal Note (saved locally)
+            </label>
+            <textarea
+              value={localNote}
+              onChange={(e) => setLocalNote(e.target.value)}
+              onBlur={handleSaveNote}
+              placeholder="Add a personal note about this certificate..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+              rows={2}
+            />
+          </div>
+          
           <div className="pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Category</p>
-              <p className="font-medium text-gray-900">{certificate.category}</p>
+              <p className="font-medium text-gray-900 text-sm sm:text-base">{certificate.category}</p>
             </div>
             {certificate.subcategory && (
               <div>
                 <p className="text-sm text-gray-500">Subcategory</p>
-                <p className="font-medium text-gray-900">{certificate.subcategory}</p>
+                <p className="font-medium text-gray-900 text-sm sm:text-base">{certificate.subcategory}</p>
               </div>
             )}
             <div>
               <p className="text-sm text-gray-500">Holder</p>
-              <p className="font-medium text-gray-900">{certificate.holder}</p>
+              <p className="font-medium text-gray-900 text-sm sm:text-base">{certificate.holder}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Status</p>
@@ -422,11 +523,22 @@ function App() {
   const [selectedStatus, setSelectedStatus] = useState('')
   const [selectedCertificate, setSelectedCertificate] = useState(null)
   const [checkedCerts, setCheckedCerts] = useState(loadCheckedState)
+  const [flaggedCerts, setFlaggedCerts] = useState(loadFlags)
+  const [certNotes, setCertNotes] = useState(loadNotes)
+  const [editingNote, setEditingNote] = useState(null)
   
-  // Save to localStorage whenever checked state changes (only checkmarks are saved locally)
+  // Save to localStorage whenever state changes
   useEffect(() => {
     saveCheckedState(checkedCerts)
   }, [checkedCerts])
+  
+  useEffect(() => {
+    saveFlags(flaggedCerts)
+  }, [flaggedCerts])
+  
+  useEffect(() => {
+    saveNotes(certNotes)
+  }, [certNotes])
   
   // Get dynamic status for a certificate
   const getDynamicStatus = (cert) => {
@@ -491,8 +603,25 @@ function App() {
     }))
   }
   
-  // Count checked certificates
+  // Toggle flag
+  const toggleFlag = (certId) => {
+    setFlaggedCerts(prev => ({
+      ...prev,
+      [certId]: !prev[certId]
+    }))
+  }
+  
+  // Update note
+  const updateNote = (certId, note) => {
+    setCertNotes(prev => ({
+      ...prev,
+      [certId]: note
+    }))
+  }
+  
+  // Count checked and flagged certificates
   const checkedCount = Object.values(checkedCerts).filter(Boolean).length
+  const flaggedCount = Object.values(flaggedCerts).filter(Boolean).length
   
   const clearFilters = () => {
     setSearchQuery('')
@@ -554,24 +683,25 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Ship size={24} className="text-white" />
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 bg-blue-600 rounded-lg">
+                <Ship size={20} className="text-white sm:w-6 sm:h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Seafarer Certificates</h1>
-                <p className="text-xs text-gray-500">Pavlos Angelos Filippakis</p>
+                <h1 className="text-base sm:text-xl font-bold text-gray-900">Seafarer Certificates</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Pavlos Angelos Filippakis</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
-                <span className="font-medium text-emerald-600">{checkedCount}</span> / {activeCertificates.length} checked
+            <div className="flex items-center gap-2 sm:gap-4">
+              <span className="text-xs sm:text-sm text-gray-500">
+                <span className="font-medium text-emerald-600">{checkedCount}</span>/{activeCertificates.length}
+                {flaggedCount > 0 && <span className="ml-1 text-orange-500">🚩{flaggedCount}</span>}
               </span>
               <button
                 onClick={downloadCSV}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 title="Download CSV"
               >
                 <Download size={16} />
@@ -582,9 +712,18 @@ function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
+        {/* Local Storage Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
+          <Info size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs sm:text-sm text-blue-700">
+            <strong>Note:</strong> Checkmarks, flags, and notes are saved locally in your browser. 
+            They will disappear if you change browser or clear cookies.
+          </p>
+        </div>
+        
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
           <StatsCard icon={BookOpen} label="Total Certificates" value={stats.total} color="bg-blue-500" />
           <StatsCard icon={CheckCircle} label="Valid" value={stats.valid} color="bg-emerald-500" />
           <StatsCard icon={Clock} label="Expiring Soon" value={stats.expiring} color="bg-amber-500" />
@@ -646,29 +785,32 @@ function App() {
         {filteredCertificates.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto max-h-[600px]">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10">
                   <tr className="bg-gray-50 border-b border-gray-200 shadow-sm">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
-                      Checked
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10 sm:w-16">
+                      ✓
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      Certificate Name
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10 sm:w-16">
+                      🚩
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                      Cert Number
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Certificate
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                      Issuance
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24 sm:w-32 hidden md:table-cell">
+                      Cert #
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-32">
-                      Expiration
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24 sm:w-32 hidden lg:table-cell">
+                      Issued
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-28">
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24 sm:w-32 hidden sm:table-cell">
+                      Expires
+                    </th>
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-20 sm:w-28">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">
-                      View
+                    <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10 sm:w-16">
+                      
                     </th>
                   </tr>
                 </thead>
@@ -679,10 +821,10 @@ function App() {
                       <React.Fragment key={category}>
                         {/* Category Header Row */}
                         <tr className="bg-slate-100">
-                          <td colSpan={7} className="px-4 py-2">
+                          <td colSpan={8} className="px-2 sm:px-4 py-2">
                             <div className="flex items-center gap-2">
                               <CategoryIcon size={16} className="text-slate-500" />
-                              <span className="font-semibold text-slate-700">{category}</span>
+                              <span className="font-semibold text-slate-700 text-sm">{category}</span>
                               <span className="text-xs text-slate-500">({certs.length})</span>
                             </div>
                           </td>
@@ -690,25 +832,40 @@ function App() {
                         {/* Certificate Rows */}
                         {certs.map(cert => {
                           const isChecked = checkedCerts[cert.id] || false
+                          const isFlagged = flaggedCerts[cert.id] || false
+                          const note = certNotes[cert.id] || ''
                           const dynamicStatus = getDynamicStatus(cert)
                           
-                          // Calculate 5-year expiry for STCW certs without expiry
+                          // Calculate expiry display
                           let displayExpiry = cert.expiryDate
                           let isUnofficialExpiry = false
-                          if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
+                          let expiryNote = ''
+                          
+                          // For annual renewal certs (IAATO, AECO, Svalbard)
+                          if (needsAnnualRenewal(cert) && cert.issuanceDate) {
+                            const issued = new Date(cert.issuanceDate)
+                            const oneYearLater = new Date(issued)
+                            oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
+                            displayExpiry = oneYearLater.toISOString().split('T')[0]
+                            isUnofficialExpiry = true
+                            expiryNote = '1yr'
+                          }
+                          // For STCW certs without expiry
+                          else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
                             const issued = new Date(cert.issuanceDate)
                             const fiveYearsLater = new Date(issued)
                             fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
                             displayExpiry = fiveYearsLater.toISOString().split('T')[0]
                             isUnofficialExpiry = true
+                            expiryNote = '5yr'
                           }
                           
                           return (
                             <tr 
                               key={cert.id} 
-                              className={`hover:bg-gray-50 transition-colors ${isChecked ? 'bg-emerald-50/50' : ''}`}
+                              className={`hover:bg-gray-50 transition-colors ${isChecked ? 'bg-emerald-50/50' : ''} ${isFlagged ? 'bg-orange-50/50' : ''}`}
                             >
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                 <button
                                   onClick={() => toggleChecked(cert.id)}
                                   className={`p-1 rounded transition-colors ${
@@ -717,45 +874,62 @@ function App() {
                                       : 'text-gray-300 hover:text-gray-400'
                                   }`}
                                 >
-                                  {isChecked ? <CheckSquare size={20} /> : <Square size={20} />}
+                                  {isChecked ? <CheckSquare size={18} /> : <Square size={18} />}
                                 </button>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                <button
+                                  onClick={() => toggleFlag(cert.id)}
+                                  className={`p-1 rounded transition-colors ${
+                                    isFlagged 
+                                      ? 'text-orange-500 hover:text-orange-600' 
+                                      : 'text-gray-300 hover:text-gray-400'
+                                  }`}
+                                >
+                                  <Flag size={18} fill={isFlagged ? 'currentColor' : 'none'} />
+                                </button>
+                              </td>
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                 <div>
-                                  <p className="font-medium text-gray-900">{cert.name}</p>
+                                  <p className="font-medium text-gray-900 text-xs sm:text-sm">{cert.name}</p>
                                   {cert.subcategory && (
-                                    <p className="text-xs text-gray-500 mt-0.5">{cert.subcategory}</p>
+                                    <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{cert.subcategory}</p>
+                                  )}
+                                  {note && (
+                                    <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
+                                      <MessageSquare size={10} /> {note.length > 30 ? note.substring(0, 30) + '...' : note}
+                                    </p>
                                   )}
                                 </div>
                               </td>
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-gray-600 font-mono">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden md:table-cell">
+                                <span className="text-xs sm:text-sm text-gray-600 font-mono">
                                   {cert.certNumber || '—'}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
-                                <span className="text-sm text-gray-600">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden lg:table-cell">
+                                <span className="text-xs sm:text-sm text-gray-600">
                                   {formatDate(cert.issuanceDate)}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-sm ${
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 hidden sm:table-cell">
+                                <span className={`text-xs sm:text-sm ${
                                   dynamicStatus === 'expired' ? 'text-red-600 font-medium' :
                                   dynamicStatus === 'expiring' ? 'text-amber-600 font-medium' :
                                   isUnofficialExpiry ? 'text-fuchsia-600 font-medium italic' :
                                   'text-gray-600'
                                 }`}>
                                   {displayExpiry ? formatDate(displayExpiry) : '—'}
-                                  {isUnofficialExpiry && <span className="text-xs ml-1">(5yr)</span>}
+                                  {isUnofficialExpiry && <span className="text-xs ml-1">({expiryNote})</span>}
                                 </span>
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                 <StatusBadge status={dynamicStatus} />
                               </td>
-                              <td className="px-4 py-3">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3">
                                 <button
                                   onClick={() => setSelectedCertificate(cert)}
-                                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  className="p-1 sm:p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                   title="View details"
                                 >
                                   <ExternalLink size={16} />
@@ -792,6 +966,10 @@ function App() {
       <CertificateModal 
         certificate={selectedCertificate} 
         onClose={() => setSelectedCertificate(null)}
+        isFlagged={selectedCertificate ? flaggedCerts[selectedCertificate.id] : false}
+        note={selectedCertificate ? certNotes[selectedCertificate.id] : ''}
+        onToggleFlag={toggleFlag}
+        onUpdateNote={updateNote}
       />
     </div>
   )

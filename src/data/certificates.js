@@ -47,6 +47,20 @@ export const certificates = [
   // CoC & Endorsements
   {
     id: 4,
+    name: "CV Filippakis Pavlos - Master Unlimited",
+    category: "CoC & Endorsements",
+    subcategory: "Primary CoC",
+    issuer: "Hellenic Republic",
+    holder: "Pavlos Angelos Filippakis",
+    file: "Pavlos Angelos Filippakis - Master Unlimited.pdf",
+    path: "Certificates/Pavlos Angelos Filippakis - Master Unlimited.pdf",
+    certNumber: null,
+    issuanceDate: "2025-11-16",
+    expiryDate: null,
+    status: "valid"
+  },
+  {
+    id: 5,
     name: "Cayman Islands Master Endorsement",
     category: "CoC & Endorsements",
     subcategory: "Flag State Endorsements",
@@ -60,7 +74,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 5,
+    id: 6,
     name: "Certificate of Competency (CoC)",
     category: "CoC & Endorsements",
     subcategory: "Primary CoC",
@@ -74,7 +88,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 6,
+    id: 7,
     name: "Cook Islands Master Endorsement",
     category: "CoC & Endorsements",
     subcategory: "Flag State Endorsements",
@@ -88,7 +102,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 7,
+    id: 8,
     name: "Marshall Islands Master Endorsement",
     category: "CoC & Endorsements",
     subcategory: "Flag State Endorsements",
@@ -104,7 +118,7 @@ export const certificates = [
 
   // STCW Certificates
   {
-    id: 8,
+    id: 9,
     name: "Advanced Liquefied Gas Training",
     category: "STCW",
     subcategory: "Tanker Training",
@@ -118,7 +132,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 9,
+    id: 10,
     name: "Bridge Resource Management (BRM/BTM)",
     category: "STCW",
     subcategory: "Bridge Training",
@@ -132,7 +146,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 10,
+    id: 11,
     name: "Captain's Medical Certificate 2025",
     category: "STCW",
     subcategory: "Medical",
@@ -146,7 +160,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 11,
+    id: 12,
     name: "ECDIS Generic Training",
     category: "STCW",
     subcategory: "ECDIS",
@@ -160,7 +174,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 12,
+    id: 13,
     name: "FURUNO ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -174,7 +188,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 13,
+    id: 14,
     name: "Transas ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -188,7 +202,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 14,
+    id: 15,
     name: "Ice Navigator Level 1",
     category: "STCW",
     subcategory: "Polar Operations",
@@ -202,7 +216,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 15,
+    id: 16,
     name: "JRC ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -216,7 +230,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 16,
+    id: 17,
     name: "Polar Code Basic & Advanced",
     category: "STCW",
     subcategory: "Polar Operations",
@@ -230,7 +244,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 17,
+    id: 18,
     name: "Ship Security Awareness (SSA)",
     category: "STCW",
     subcategory: "Security",
@@ -244,7 +258,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 18,
+    id: 19,
     name: "Ship Security Officer (SSO)",
     category: "STCW",
     subcategory: "Security",
@@ -257,21 +271,7 @@ export const certificates = [
     expiryDate: null,
     status: "valid"
   },
-  {
-    id: 19,
-    name: "SSO Verification Document",
-    category: "STCW",
-    subcategory: "Security",
-    issuer: "Maritime Authority",
-    holder: "Pavlos Angelos Filippakis",
-    file: "SSO certificates verification.pdf",
-    path: "Certificates/STCW/SSO certificates verification.pdf",
-    certNumber: null,
-    issuanceDate: null,
-    expiryDate: null,
-    status: "valid"
-  },
-  {
+    {
     id: 20,
     name: "STCW 95 - LSA, FFE, Fast Rescue",
     category: "STCW",
@@ -577,14 +577,14 @@ export const certificates = [
   },
   {
     id: 41,
-    name: "US Visa",
+    name: "US Visa (C1/D+B1/B2)",
     category: "Identity Documents",
     subcategory: "Visas",
     issuer: "United States - Athens Embassy",
     holder: "Pavlos Angelos Filippakis",
     file: "Filippakis US Visa.pdf",
     path: "Certificates/Passports, IDs, SRBs/Filippakis US Visa.pdf",
-    certNumber: "20230865890001",
+    certNumber: null,
     issuanceDate: "2023-05-09",
     expiryDate: "2033-05-07",
     status: "valid"
