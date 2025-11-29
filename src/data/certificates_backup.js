@@ -60,7 +60,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 5,
+    id: 4,
     name: "Certificate of Competency (CoC)",
     category: "CoC & Endorsements",
     subcategory: "Primary CoC",
@@ -74,7 +74,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 6,
+    id: 4,
     name: "Cook Islands Master Endorsement",
     category: "CoC & Endorsements",
     subcategory: "Flag State Endorsements",
@@ -88,7 +88,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 7,
+    id: 4,
     name: "Marshall Islands Master Endorsement",
     category: "CoC & Endorsements",
     subcategory: "Flag State Endorsements",
@@ -104,7 +104,7 @@ export const certificates = [
 
   // STCW Certificates
   {
-    id: 8,
+    id: 4,
     name: "Advanced Liquefied Gas Training",
     category: "STCW",
     subcategory: "Tanker Training",
@@ -118,7 +118,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 9,
+    id: 4,
     name: "Bridge Resource Management (BRM/BTM)",
     category: "STCW",
     subcategory: "Bridge Training",
@@ -132,7 +132,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 10,
+    id: 4,
     name: "Captain's Medical Certificate 2025",
     category: "STCW",
     subcategory: "Medical",
@@ -146,7 +146,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 11,
+    id: 4,
     name: "ECDIS Generic Training",
     category: "STCW",
     subcategory: "ECDIS",
@@ -160,7 +160,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 12,
+    id: 4,
     name: "FURUNO ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -174,7 +174,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 13,
+    id: 4,
     name: "Transas ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -188,7 +188,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 14,
+    id: 4,
     name: "Ice Navigator Level 1",
     category: "STCW",
     subcategory: "Polar Operations",
@@ -202,7 +202,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 15,
+    id: 4,
     name: "JRC ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -216,7 +216,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 16,
+    id: 4,
     name: "Polar Code Basic & Advanced",
     category: "STCW",
     subcategory: "Polar Operations",
@@ -230,7 +230,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 17,
+    id: 4,
     name: "Ship Security Awareness (SSA)",
     category: "STCW",
     subcategory: "Security",
@@ -244,7 +244,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 18,
+    id: 4,
     name: "Ship Security Officer (SSO)",
     category: "STCW",
     subcategory: "Security",
@@ -258,7 +258,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 19,
+    id: 4,
     name: "SSO Verification Document",
     category: "STCW",
     subcategory: "Security",
@@ -272,7 +272,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 20,
+    id: 4,
     name: "STCW 95 - LSA, FFE, Fast Rescue",
     category: "STCW",
     subcategory: "Safety Training",
@@ -286,7 +286,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 21,
+    id: 4,
     name: "Sperry ECDIS Type-Specific",
     category: "STCW",
     subcategory: "ECDIS",
@@ -302,7 +302,7 @@ export const certificates = [
 
   // Non-STCW Certificates - Medical
   {
-    id: 22,
+    id: 4,
     name: "FPOS (First Person on Scene)",
     category: "Non-STCW",
     subcategory: "Medical",
@@ -316,7 +316,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 23,
+    id: 4,
     name: "Trauma Care Certificate",
     category: "Non-STCW",
     subcategory: "Medical",
@@ -330,7 +330,7 @@ export const certificates = [
     status: "expiring"
   },
   {
-    id: 24,
+    id: 4,
     name: "Remote Emergency Medical Technician (REMT)",
     category: "Non-STCW",
     subcategory: "Medical",
@@ -346,7 +346,7 @@ export const certificates = [
 
   // Non-STCW Certificates - Polar
   {
-    id: 25,
+    id: 4,
     name: "IAATO Training Certificate 2024",
     category: "Non-STCW",
     subcategory: "Polar",
@@ -360,7 +360,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 26,
+    id: 4,
     name: "AECO General Questions 2024",
     category: "Non-STCW",
     subcategory: "Polar",
@@ -374,7 +374,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 27,
+    id: 4,
     name: "AECO Mariner Assessment 2024",
     category: "Non-STCW",
     subcategory: "Polar",
@@ -388,7 +388,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 28,
+    id: 4,
     name: "Svalbard Certificate 2024",
     category: "Non-STCW",
     subcategory: "Polar",
@@ -404,7 +404,7 @@ export const certificates = [
 
   // Non-STCW Certificates - Specializations
   {
-    id: 29,
+    id: 4,
     name: "Close Protection Officer Course",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -418,7 +418,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 30,
+    id: 4,
     name: "Draeger Gas Detectors Training",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -432,7 +432,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 31,
+    id: 4,
     name: "Mooring Ropes Training (Katradis)",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -446,7 +446,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 32,
+    id: 4,
     name: "Freefall Lifeboat Training",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -460,7 +460,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 33,
+    id: 4,
     name: "Kongsberg K-Chief Step 1",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -474,7 +474,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 34,
+    id: 4,
     name: "Safety Officer Certificate",
     category: "Non-STCW",
     subcategory: "Specializations",
@@ -490,7 +490,7 @@ export const certificates = [
 
   // Non-STCW - Other licenses
   {
-    id: 35,
+    id: 4,
     name: "PADI Rescue Diver",
     category: "Non-STCW",
     subcategory: "Diving",
@@ -504,7 +504,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 36,
+    id: 4,
     name: "Powerboat License (up to 24m) - Greece",
     category: "Non-STCW",
     subcategory: "Small Craft",
@@ -518,7 +518,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 37,
+    id: 4,
     name: "Sailing Boat License - Greece",
     category: "Non-STCW",
     subcategory: "Small Craft",
@@ -534,7 +534,7 @@ export const certificates = [
 
   // Passports, IDs, SRBs
   {
-    id: 38,
+    id: 4,
     name: "Criminal Record (Clean)",
     category: "Identity Documents",
     subcategory: "Official Documents",
@@ -548,7 +548,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 39,
+    id: 4,
     name: "Driving License",
     category: "Identity Documents",
     subcategory: "Licenses",
@@ -562,7 +562,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 40,
+    id: 4,
     name: "Passport (Digitally Signed Copy)",
     category: "Identity Documents",
     subcategory: "Passports",
@@ -576,7 +576,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 41,
+    id: 4,
     name: "US Visa",
     category: "Identity Documents",
     subcategory: "Visas",
@@ -590,7 +590,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 42,
+    id: 4,
     name: "Passport",
     category: "Identity Documents",
     subcategory: "Passports",
@@ -604,7 +604,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 43,
+    id: 4,
     name: "Seaman's Record Book - Bermuda",
     category: "Identity Documents",
     subcategory: "SRBs",
@@ -618,7 +618,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 44,
+    id: 4,
     name: "Seaman's Record Book - Cayman Islands",
     category: "Identity Documents",
     subcategory: "SRBs",
@@ -632,7 +632,7 @@ export const certificates = [
     status: "valid"
   },
   {
-    id: 45,
+    id: 4,
     name: "Seaman's Record Book - Marshall Islands",
     category: "Identity Documents",
     subcategory: "SRBs",
