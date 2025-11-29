@@ -11,6 +11,8 @@
     "ocr": "node scripts/ocr-extract.js"
   },
   "dependencies": {
+    "@adobe/pdfservices-node-sdk": "^4.1.0",
+    "adm-zip": "^0.5.16",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
