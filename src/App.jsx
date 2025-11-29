@@ -220,7 +220,6 @@ const PasswordGate = ({ onAuthenticate }) => {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (password === PASSWORD) {
-      setAuthenticated(true)
       onAuthenticate()
     } else {
       setError('Incorrect password')
@@ -229,61 +228,56 @@ const PasswordGate = ({ onAuthenticate }) => {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
-            <Lock size={32} className="text-blue-600" />
+    <div className="p-8">
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-100 rounded-full mb-4">
+          <Lock size={28} className="text-blue-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Enter Edit Mode</h2>
+        <p className="text-gray-500 mt-1 text-sm">Enter password to edit certificate data</p>
+      </div>
+      
+      <form onSubmit={handleSubmit}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError('') }}
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-900"
+              placeholder="Enter password"
+              autoFocus
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Seafarer Certificates</h1>
-          <p className="text-gray-500 mt-2">Enter password to access certificate data</p>
+          {error && (
+            <p className="mt-2 text-sm text-red-600">{error}</p>
+          )}
         </div>
         
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError('') }}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-900"
-                placeholder="Enter password"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-            {error && (
-              <p className="mt-2 text-sm text-red-600">{error}</p>
-            )}
-          </div>
-          
-          <button
-            type="submit"
-            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Unlock
-          </button>
-        </form>
-        
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Pavlos Angelos Filippakis - Certificate Management
-        </p>
-      </div>
+        <button
+          type="submit"
+          className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        >
+          Unlock Edit Mode
+        </button>
+      </form>
     </div>
   )
 }
 
 // Certificate detail modal with editing
-const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertData, onDeleteCert }) => {
+const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertData, onDeleteCert, isEditMode, onRequestEdit }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [editData, setEditData] = useState({
@@ -292,6 +286,15 @@ const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertD
     issuanceDate: '',
     expiryDate: ''
   })
+  
+  // Handle edit button click - requires authentication
+  const handleEditClick = () => {
+    if (isEditMode) {
+      setIsEditing(true)
+    } else {
+      onRequestEdit()
+    }
+  }
   
   // Get merged data (original + overrides)
   const getMergedData = () => {
@@ -373,19 +376,21 @@ const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertD
               {!isEditing ? (
                 <>
                   <button 
-                    onClick={() => setIsEditing(true)}
-                    className="p-2 hover:bg-blue-100 rounded-lg transition-colors text-blue-600"
-                    title="Edit certificate data"
+                    onClick={handleEditClick}
+                    className={`p-2 rounded-lg transition-colors ${isEditMode ? 'hover:bg-blue-100 text-blue-600' : 'hover:bg-gray-100 text-gray-400'}`}
+                    title={isEditMode ? "Edit certificate data" : "Login to edit"}
                   >
-                    <Edit3 size={20} />
+                    {isEditMode ? <Edit3 size={20} /> : <Lock size={20} />}
                   </button>
-                  <button 
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
-                    title="Delete certificate"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  {isEditMode && (
+                    <button 
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="p-2 hover:bg-red-100 rounded-lg transition-colors text-red-600"
+                      title="Delete certificate"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  )}
                 </>
               ) : (
                 <button 
@@ -507,22 +512,6 @@ const CertificateModal = ({ certificate, onClose, certDataOverrides, onSaveCertD
             </div>
           </div>
           
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-sm text-gray-500 mb-2">File</p>
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-              <FileText size={18} className="text-gray-400" />
-              <span className="text-sm text-gray-700 flex-1 truncate">{certificate.file}</span>
-              <a 
-                href={`/Certificates/${certificate.path.replace('Certificates/', '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-                title="Open PDF"
-              >
-                <ExternalLink size={16} className="text-blue-600" />
-              </a>
-            </div>
-          </div>
         </div>
         
         <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
@@ -601,7 +590,8 @@ const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
 }
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(isAuthenticated)
+  const [isEditMode, setIsEditMode] = useState(isAuthenticated)
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedStatus, setSelectedStatus] = useState('')
@@ -709,10 +699,17 @@ function App() {
     return groups
   }, [filteredCertificates])
   
-  // Handle logout
+  // Handle logout (exit edit mode)
   const handleLogout = () => {
     setAuthenticated(false)
-    setIsLoggedIn(false)
+    setIsEditMode(false)
+  }
+  
+  // Handle login for edit mode
+  const handleLogin = () => {
+    setAuthenticated(true)
+    setIsEditMode(true)
+    setShowPasswordPrompt(false)
   }
   
   // Toggle checkbox
@@ -776,11 +773,6 @@ function App() {
     link.click()
   }
   
-  // Show password gate if not authenticated
-  if (!isLoggedIn) {
-    return <PasswordGate onAuthenticate={() => setIsLoggedIn(true)} />
-  }
-  
   const hasActiveFilters = searchQuery || selectedCategory || selectedStatus
 
   return (
@@ -810,14 +802,25 @@ function App() {
                 <Download size={16} />
                 <span className="hidden sm:inline">Export</span>
               </button>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <LogOut size={16} />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+              {isEditMode ? (
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+                  title="Exit edit mode"
+                >
+                  <Lock size={16} />
+                  <span className="hidden sm:inline">Editing</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowPasswordPrompt(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Login to edit"
+                >
+                  <Lock size={16} />
+                  <span className="hidden sm:inline">Edit Mode</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1037,7 +1040,21 @@ function App() {
         certDataOverrides={certDataOverrides}
         onSaveCertData={handleSaveCertData}
         onDeleteCert={handleDeleteCert}
+        isEditMode={isEditMode}
+        onRequestEdit={() => setShowPasswordPrompt(true)}
       />
+      
+      {/* Password Prompt Modal */}
+      {showPasswordPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowPasswordPrompt(false)}>
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <PasswordGate onAuthenticate={handleLogin} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
