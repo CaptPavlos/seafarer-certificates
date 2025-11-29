@@ -160,13 +160,10 @@ const saveCertDataOverrides = (data) => {
   }
 }
 
-// Check if user is authenticated
+// Check if user is authenticated for editing
+// Edit mode is session-based only - does not persist across page reloads
 const isAuthenticated = () => {
-  try {
-    return localStorage.getItem(AUTH_KEY) === 'true'
-  } catch {
-    return false
-  }
+  return false // Always start locked - user must enter password each session
 }
 
 // Set authentication state
