@@ -36,7 +36,31 @@ const STORAGE_KEY = 'seafarer-certificates-checked'
 const AUTH_KEY = 'seafarer-certificates-auth'
 const CERT_DATA_KEY = 'seafarer-certificates-data'
 const DELETED_KEY = 'seafarer-certificates-deleted'
+const ACCESS_KEY = 'seafarer-certificates-access'
 const PASSWORD = 'Marsoft'
+const ACCESS_PASSWORD = 'HelpingMyAgent'
+
+// Check if user has access (viewed disclaimer)
+const hasAccess = () => {
+  try {
+    return localStorage.getItem(ACCESS_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+// Set access state
+const setAccess = (value) => {
+  try {
+    if (value) {
+      localStorage.setItem(ACCESS_KEY, 'true')
+    } else {
+      localStorage.removeItem(ACCESS_KEY)
+    }
+  } catch (e) {
+    console.error('Failed to save access state:', e)
+  }
+}
 
 // Load deleted certificates from localStorage
 const loadDeletedCerts = () => {
@@ -209,6 +233,110 @@ const formatDate = (dateString) => {
     month: 'short',
     day: 'numeric'
   })
+}
+
+// Access Gate Component - Cover page with disclaimer
+const AccessGate = ({ onGrantAccess }) => {
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (password === ACCESS_PASSWORD) {
+      setAccess(true)
+      onGrantAccess()
+    } else {
+      setError('Incorrect access code')
+      setPassword('')
+    }
+  }
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-blue-900 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-lg">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-4">
+            <Shield size={40} className="text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Confidential Information</h1>
+        </div>
+        
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={24} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-red-800 mb-2">Privacy Notice</h3>
+              <p className="text-red-700 text-sm leading-relaxed">
+                The data contained in this application is <strong>highly personal and confidential</strong>. 
+                It includes sensitive information about professional certifications, identity documents, 
+                and personal records.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <Lock size={24} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-amber-800 mb-2">Restricted Access</h3>
+              <p className="text-amber-700 text-sm leading-relaxed">
+                <strong>Dissemination, copying, or sharing</strong> of this information without 
+                explicit written permission from the data owner is <strong>strictly prohibited</strong> 
+                and may be subject to legal action.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <p className="text-gray-600 text-sm text-center mb-6">
+          By entering the access code, you acknowledge that you have been authorized to view this data 
+          and agree to maintain its confidentiality.
+        </p>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Access Code
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError('') }}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-900"
+                placeholder="Enter access code"
+                autoFocus
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {error && (
+              <p className="mt-2 text-sm text-red-600">{error}</p>
+            )}
+          </div>
+          
+          <button
+            type="submit"
+            className="w-full py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+          >
+            I Understand - Grant Access
+          </button>
+        </form>
+        
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Pavlos Angelos Filippakis - Personal Certificate Records
+        </p>
+      </div>
+    </div>
+  )
 }
 
 // Password Gate Component
@@ -590,6 +718,7 @@ const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
 }
 
 function App() {
+  const [hasUserAccess, setHasUserAccess] = useState(hasAccess)
   const [isEditMode, setIsEditMode] = useState(isAuthenticated)
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -774,6 +903,11 @@ function App() {
   }
   
   const hasActiveFilters = searchQuery || selectedCategory || selectedStatus
+  
+  // Show access gate if user hasn't acknowledged disclaimer
+  if (!hasUserAccess) {
+    return <AccessGate onGrantAccess={() => setHasUserAccess(true)} />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
