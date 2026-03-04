@@ -273,16 +273,16 @@ export const certificates = [
   },
     {
     id: 20,
-    name: "STCW 95 - LSA, FFE, Fast Rescue",
+    name: "STCW 95 - Basic Training, Fast Rescue, Medical First Aid, Advanced Fire Fighting",
     category: "STCW",
     subcategory: "Safety Training",
-    issuer: "Hellenic Republic - DSEN Aspropyrgos",
+    issuer: "Republic of Cyprus - Shipping Deputy Ministry",
     holder: "Pavlos Angelos Filippakis",
-    file: "STCW 95_ LSA-FFE-Fast Rescue.pdf",
-    path: "Certificates/STCW/STCW 95_ LSA-FFE-Fast Rescue.pdf",
-    certNumber: "93023",
-    issuanceDate: "2018-04-26",
-    expiryDate: "2026-03-01",
+    file: "STCW 95 2027.pdf",
+    path: "Certificates/STCW/STCW 95 2027.pdf",
+    certNumber: "BS00030326 / RB00005126 / MA00013026 / AF00013426",
+    issuanceDate: "2026-02-26",
+    expiryDate: "2031-02-12",
     status: "valid"
   },
   {
@@ -313,7 +313,9 @@ export const certificates = [
     certNumber: "FPOS1 8897",
     issuanceDate: "2023-02-24",
     expiryDate: "2026-02-24",
-    status: "valid"
+    status: "expired",
+    obligatory: false,
+    notes: "Not obligatory for current work - no renewal needed"
   },
   {
     id: 23,
@@ -327,7 +329,9 @@ export const certificates = [
     certNumber: "TMEC 1179",
     issuanceDate: "2023-02-24",
     expiryDate: "2025-02-24",
-    status: "expiring"
+    status: "expired",
+    obligatory: false,
+    notes: "Not obligatory for current work - no renewal needed"
   },
   {
     id: 24,
