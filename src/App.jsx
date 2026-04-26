@@ -37,6 +37,8 @@ const ACCESS_PASSWORD = 'HelpingMyAgent'
 
 // Certificates that need annual renewal (IAATO, AECO, Svalbard)
 const ANNUAL_RENEWAL_CERTS = ['IAATO', 'AECO', 'Svalbard']
+// Optional medical certs that are good to renew, but not mandatory for validity tracking
+const OPTIONAL_RENEWAL_CERTS = ['FPOS', 'Trauma Care']
 
 // Check if user has access (viewed disclaimer)
 const hasAccess = () => {
@@ -65,6 +67,10 @@ const needsAnnualRenewal = (cert) => {
   return ANNUAL_RENEWAL_CERTS.some(name => cert.name.includes(name))
 }
 
+const isOptionalRenewalCert = (cert) => {
+  return OPTIONAL_RENEWAL_CERTS.some(name => cert.name.includes(name))
+}
+
 // Calculate dynamic status based on dates
 const calculateStatus = (cert) => {
   const today = new Date()
@@ -73,6 +79,16 @@ const calculateStatus = (cert) => {
   const expiryDate = cert.expiryDate
   const issuanceDate = cert.issuanceDate
   
+  // Optional medical certs should not show as expired; they are renewal suggestions.
+  if (isOptionalRenewalCert(cert) && expiryDate) {
+    const expiry = new Date(expiryDate)
+    const sixMonthsFromNow = new Date(today)
+    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
+    if (expiry <= sixMonthsFromNow) {
+      return 'renewal-suggested'
+    }
+  }
+
   // Check if expired
   if (expiryDate) {
     const expiry = new Date(expiryDate)
@@ -583,6 +599,49 @@ function App() {
     })
   }, [searchQuery, selectedCategory, selectedStatus, activeCertificates])
   
+  const attentionCertificates = useMemo(() => {
+    return activeCertificates
+      .map(cert => {
+        const dynamicStatus = getDynamicStatus(cert)
+
+        let displayExpiry = cert.expiryDate
+        let expiryHint = ''
+
+        if (needsAnnualRenewal(cert) && cert.issuanceDate) {
+          const issued = new Date(cert.issuanceDate)
+          const oneYearLater = new Date(issued)
+          oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
+          displayExpiry = oneYearLater.toISOString().split('T')[0]
+          expiryHint = '1yr refresh'
+        } else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
+          const issued = new Date(cert.issuanceDate)
+          const fiveYearsLater = new Date(issued)
+          fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
+          displayExpiry = fiveYearsLater.toISOString().split('T')[0]
+          expiryHint = '5yr unofficial'
+        } else if (isOptionalRenewalCert(cert) && cert.expiryDate) {
+          expiryHint = 'renew if useful'
+        }
+
+        return {
+          ...cert,
+          dynamicStatus,
+          displayExpiry,
+          expiryHint
+        }
+      })
+      .filter(cert => cert.dynamicStatus !== 'valid')
+      .sort((a, b) => {
+        const priority = { expired: 0, expiring: 1, 'renewal-suggested': 2 }
+        const statusDelta = priority[a.dynamicStatus] - priority[b.dynamicStatus]
+        if (statusDelta !== 0) return statusDelta
+        if (!a.displayExpiry && !b.displayExpiry) return a.name.localeCompare(b.name)
+        if (!a.displayExpiry) return 1
+        if (!b.displayExpiry) return -1
+        return a.displayExpiry.localeCompare(b.displayExpiry)
+      })
+  }, [activeCertificates])
+
   // Group certificates by category - must be before conditional return
   const groupedCertificates = useMemo(() => {
     const groups = {}
@@ -636,9 +695,11 @@ function App() {
     const rows = activeCertificates.map(cert => {
       const dynamicStatus = getDynamicStatus(cert)
       
-      // Calculate 5-year expiry for STCW certs without expiry
+      // Calculate display expiry for derived-renewal certs
       let displayExpiry = cert.expiryDate
-      if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
+      if (isOptionalRenewalCert(cert)) {
+        displayExpiry = `${cert.expiryDate} (renew if useful)`
+      } else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
         const issued = new Date(cert.issuanceDate)
         const fiveYearsLater = new Date(issued)
         fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
@@ -730,6 +791,48 @@ function App() {
           <StatsCard icon={AlertTriangle} label="Expired" value={stats.expired} color="bg-red-500" />
           <StatsCard icon={RefreshCw} label="Consider Renewal" value={stats.renewalSuggested} color="bg-fuchsia-500" />
         </div>
+
+        {attentionCertificates.length > 0 && (
+          <div className="bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200 rounded-xl p-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Certificates needing attention</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Same list now surfaced in the Black Code dashboard.</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">Expired {stats.expired}</span>
+                <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Expiring {stats.expiring}</span>
+                <span className="px-2 py-1 rounded-full bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200">Renewal {stats.renewalSuggested}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {attentionCertificates.slice(0, 8).map(cert => (
+                <button
+                  key={cert.id}
+                  onClick={() => setSelectedCertificate(cert)}
+                  className="w-full text-left bg-white/90 hover:bg-white rounded-lg border border-fuchsia-100 px-3 py-3 transition-colors"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-gray-900 text-sm">{cert.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{cert.category} • {cert.issuer}</p>
+                      {cert.displayExpiry && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          Due: {formatDate(cert.displayExpiry)}
+                          {cert.expiryHint ? ` (${cert.expiryHint})` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      <StatusBadge status={cert.dynamicStatus} />
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Search and Filters */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">

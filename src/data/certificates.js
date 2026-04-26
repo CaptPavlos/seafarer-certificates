@@ -313,7 +313,7 @@ export const certificates = [
     certNumber: "FPOS1 8897",
     issuanceDate: "2023-02-24",
     expiryDate: "2026-02-24",
-    status: "expired",
+    status: "renewal-suggested",
     obligatory: false,
     notes: "Not obligatory for current work - no renewal needed"
   },
@@ -329,7 +329,7 @@ export const certificates = [
     certNumber: "TMEC 1179",
     issuanceDate: "2023-02-24",
     expiryDate: "2025-02-24",
-    status: "expired",
+    status: "renewal-suggested",
     obligatory: false,
     notes: "Not obligatory for current work - no renewal needed"
   },
@@ -669,6 +669,7 @@ export const getStats = () => {
   const valid = certificates.filter(c => c.status === 'valid').length;
   const expiring = certificates.filter(c => c.status === 'expiring').length;
   const expired = certificates.filter(c => c.status === 'expired').length;
+  const renewalSuggested = certificates.filter(c => c.status === 'renewal-suggested').length;
   
-  return { total, valid, expiring, expired };
+  return { total, valid, expiring, expired, renewalSuggested };
 };
