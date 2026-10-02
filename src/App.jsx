@@ -26,7 +26,8 @@ import {
   MessageSquare,
   Info
 } from 'lucide-react'
-import { certificates, categories, getStats } from './data/certificates'
+import { certificates, categories } from './data/certificates'
+import { ATTENTION_STATUSES, STATUS_LABELS, buildCertificatesCSV, calculateStatus, formatDate, getExpiryLabel, getStatusNote } from './certificate-status'
 
 // Local storage keys - checkmarks, flags, and notes are saved locally
 const STORAGE_KEY = 'seafarer-certificates-checked'
@@ -34,11 +35,6 @@ const FLAGS_KEY = 'seafarer-certificates-flags'
 const NOTES_KEY = 'seafarer-certificates-notes'
 const ACCESS_KEY = 'seafarer-certificates-access'
 const ACCESS_PASSWORD = 'HelpingMyAgent'
-
-// Certificates that need annual renewal (IAATO, AECO, Svalbard)
-const ANNUAL_RENEWAL_CERTS = ['IAATO', 'AECO', 'Svalbard']
-// Optional medical certs that are good to renew, but not mandatory for validity tracking
-const OPTIONAL_RENEWAL_CERTS = ['FPOS', 'Trauma Care']
 
 // Check if user has access (viewed disclaimer)
 const hasAccess = () => {
@@ -60,82 +56,6 @@ const setAccess = (value) => {
   } catch (e) {
     console.error('Failed to save access state:', e)
   }
-}
-
-// Check if certificate needs annual renewal (IAATO, AECO, Svalbard)
-const needsAnnualRenewal = (cert) => {
-  return ANNUAL_RENEWAL_CERTS.some(name => cert.name.includes(name))
-}
-
-const isOptionalRenewalCert = (cert) => {
-  return OPTIONAL_RENEWAL_CERTS.some(name => cert.name.includes(name))
-}
-
-// Calculate dynamic status based on dates
-const calculateStatus = (cert) => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  const expiryDate = cert.expiryDate
-  const issuanceDate = cert.issuanceDate
-  
-  // Optional medical certs should not show as expired; they are renewal suggestions.
-  if (isOptionalRenewalCert(cert) && expiryDate) {
-    const expiry = new Date(expiryDate)
-    const sixMonthsFromNow = new Date(today)
-    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
-    if (expiry <= sixMonthsFromNow) {
-      return 'renewal-suggested'
-    }
-  }
-
-  // Check if expired
-  if (expiryDate) {
-    const expiry = new Date(expiryDate)
-    if (expiry < today) {
-      return 'expired'
-    }
-    // Check if expiring within 6 months (approx 182 days)
-    const sixMonthsFromNow = new Date(today)
-    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
-    if (expiry <= sixMonthsFromNow) {
-      return 'expiring'
-    }
-  }
-  
-  // For IAATO, AECO, Svalbard - check 1-year renewal from issuance
-  if (needsAnnualRenewal(cert) && issuanceDate) {
-    const issued = new Date(issuanceDate)
-    const oneYearLater = new Date(issued)
-    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
-    if (oneYearLater < today) {
-      return 'renewal-suggested'
-    }
-    // Check if within 2 months of 1-year mark
-    const twoMonthsFromNow = new Date(today)
-    twoMonthsFromNow.setDate(twoMonthsFromNow.getDate() + 60)
-    if (oneYearLater <= twoMonthsFromNow) {
-      return 'renewal-suggested'
-    }
-  }
-  
-  // For STCW certs without expiry, check 5-year unofficial expiry
-  if (cert.category === 'STCW' && !expiryDate && issuanceDate && !needsAnnualRenewal(cert)) {
-    const issued = new Date(issuanceDate)
-    const fiveYearsLater = new Date(issued)
-    fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
-    if (fiveYearsLater < today) {
-      return 'renewal-suggested'
-    }
-    // Check if within 6 months of 5-year mark
-    const sixMonthsFromNow = new Date(today)
-    sixMonthsFromNow.setDate(sixMonthsFromNow.getDate() + 182)
-    if (fiveYearsLater <= sixMonthsFromNow) {
-      return 'renewal-suggested'
-    }
-  }
-  
-  return 'valid'
 }
 
 // Load checked state from localStorage
@@ -213,10 +133,13 @@ const StatusBadge = ({ status }) => {
     valid: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle, label: 'Valid' },
     expiring: { bg: 'bg-amber-100', text: 'text-amber-700', icon: Clock, label: 'Expiring Soon' },
     expired: { bg: 'bg-red-100', text: 'text-red-700', icon: AlertTriangle, label: 'Expired' },
-    'renewal-suggested': { bg: 'bg-fuchsia-100', text: 'text-fuchsia-700', icon: RefreshCw, label: 'Consider Renewal' }
+    'renewal-suggested': { bg: 'bg-fuchsia-100', text: 'text-fuchsia-700', icon: RefreshCw, label: 'Consider Renewal' },
+    review: { bg: 'bg-orange-100', text: 'text-orange-800', icon: Info, label: 'Needs Review' },
+    'no-expiry-stated': { bg: 'bg-slate-100', text: 'text-slate-700', icon: FileText, label: 'No Expiry Stated' },
+    historical: { bg: 'bg-gray-100', text: 'text-gray-600', icon: BookOpen, label: 'Historical Record' }
   }
   
-  const { bg, text, icon: Icon, label } = config[status] || config.valid
+  const { bg, text, icon: Icon, label } = config[status] || config.review
   
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${bg} ${text}`}>
@@ -227,7 +150,9 @@ const StatusBadge = ({ status }) => {
 }
 
 // Stats card component
-const StatsCard = ({ icon: Icon, label, value, color }) => (
+const StatsCard = (props) => {
+  const { icon: Icon, label, value, color } = props
+  return (
   <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow`}>
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded-lg ${color}`}>
@@ -239,16 +164,7 @@ const StatsCard = ({ icon: Icon, label, value, color }) => (
       </div>
     </div>
   </div>
-)
-
-// Format date helper
-const formatDate = (dateString) => {
-  if (!dateString) return '—'
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  })
+  )
 }
 
 // Access Gate Component - Cover page with disclaimer
@@ -360,10 +276,6 @@ const AccessGate = ({ onGrantAccess }) => {
 const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag, onUpdateNote }) => {
   const [localNote, setLocalNote] = useState(note || '')
   
-  useEffect(() => {
-    setLocalNote(note || '')
-  }, [note, certificate])
-  
   if (!certificate) return null
   
   const Icon = categoryIcons[certificate.category] || FileText
@@ -409,6 +321,21 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
         </div>
         
         <div className="p-4 sm:p-6 space-y-4">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-2">
+            <StatusBadge status={dynamicStatus} />
+            {getStatusNote(certificate, dynamicStatus) && (
+              <p className="text-sm text-slate-700">{getStatusNote(certificate, dynamicStatus)}</p>
+            )}
+            {certificate.file && <p className="text-xs text-slate-500 break-words">Source: {certificate.file}</p>}
+            {certificate.verifiedAt && <p className="text-xs text-slate-500">Source checked: {formatDate(certificate.verifiedAt)}</p>}
+            {certificate.sourceUrl && (
+              <a href={certificate.sourceUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline">
+                <ExternalLink size={14} /> Open file
+              </a>
+            )}
+            {certificate.sourceMissing && <p className="text-sm text-orange-800">Source file missing from the audited folder.</p>}
+          </div>
           <div className="space-y-3">
             <div>
               <label className="block text-sm text-gray-500 mb-1">Certificate Number</label>
@@ -419,7 +346,7 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
             
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-500 mb-1">Issuance Date</label>
+                <label className="block text-sm text-gray-500 mb-1">Issued / completed</label>
                 <p className="font-medium text-gray-900 text-sm sm:text-base">
                   {certificate.issuanceDate ? formatDate(certificate.issuanceDate) : <span className="text-gray-400 italic">Not set</span>}
                 </p>
@@ -428,7 +355,7 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
               <div>
                 <label className="block text-sm text-gray-500 mb-1">Expiry Date</label>
                 <p className="font-medium text-gray-900 text-sm sm:text-base">
-                  {certificate.expiryDate ? formatDate(certificate.expiryDate) : <span className="text-gray-400 italic">Not set</span>}
+                  {getExpiryLabel(certificate)}
                 </p>
               </div>
             </div>
@@ -467,9 +394,6 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
             <div>
               <p className="text-sm text-gray-500">Status</p>
               <StatusBadge status={dynamicStatus} />
-              {dynamicStatus === 'renewal-suggested' && (
-                <p className="text-xs text-fuchsia-600 mt-1">5-year unofficial expiry reached</p>
-              )}
             </div>
           </div>
         </div>
@@ -488,7 +412,7 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
 }
 
 // Filter dropdown component
-const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
+const FilterDropdown = ({ label, options, value, onChange, icon: Icon, labels = {} }) => {
   const [isOpen, setIsOpen] = useState(false)
   
   return (
@@ -500,7 +424,7 @@ const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
         }`}
       >
         {Icon && <Icon size={16} />}
-        <span className="text-sm font-medium">{value || label}</span>
+        <span className="text-sm font-medium">{labels[value] || value || label}</span>
         <ChevronDown size={16} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
@@ -522,7 +446,7 @@ const FilterDropdown = ({ label, options, value, onChange, icon: Icon }) => {
                   value === option ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                 }`}
               >
-                {option}
+                {labels[option] || option}
               </button>
             ))}
           </div>
@@ -541,7 +465,6 @@ function App() {
   const [checkedCerts, setCheckedCerts] = useState(loadCheckedState)
   const [flaggedCerts, setFlaggedCerts] = useState(loadFlags)
   const [certNotes, setCertNotes] = useState(loadNotes)
-  const [editingNote, setEditingNote] = useState(null)
   
   // Save to localStorage whenever state changes
   useEffect(() => {
@@ -556,34 +479,20 @@ function App() {
     saveNotes(certNotes)
   }, [certNotes])
   
-  // Get dynamic status for a certificate
-  const getDynamicStatus = (cert) => {
-    return calculateStatus(cert)
-  }
-  
   // All certificates from source (no local filtering)
   const activeCertificates = certificates
   
-  // Calculate stats dynamically
+  // Keep every status visible in the summary, including unresolved and historical records.
   const stats = useMemo(() => {
-    const total = activeCertificates.length
-    let valid = 0, expiring = 0, expired = 0, renewalSuggested = 0
-    
-    activeCertificates.forEach(cert => {
-      const status = getDynamicStatus(cert)
-      if (status === 'valid') valid++
-      else if (status === 'expiring') expiring++
-      else if (status === 'expired') expired++
-      else if (status === 'renewal-suggested') renewalSuggested++
-    })
-    
-    return { total, valid, expiring, expired, renewalSuggested }
+    const counts = Object.fromEntries(Object.keys(STATUS_LABELS).map(status => [status, 0]))
+    activeCertificates.forEach(cert => { counts[calculateStatus(cert)]++ })
+    return { total: activeCertificates.length, ...counts }
   }, [activeCertificates])
-  
+
   // Filter certificates - must be before conditional return
   const filteredCertificates = useMemo(() => {
     return activeCertificates.filter(cert => {
-      const dynamicStatus = getDynamicStatus(cert)
+      const dynamicStatus = calculateStatus(cert)
       
       const matchesSearch = searchQuery === '' || 
         cert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -593,7 +502,8 @@ function App() {
         (cert.certNumber && cert.certNumber.toLowerCase().includes(searchQuery.toLowerCase()))
       
       const matchesCategory = selectedCategory === '' || cert.category === selectedCategory
-      const matchesStatus = selectedStatus === '' || dynamicStatus === selectedStatus
+      const matchesStatus = selectedStatus === '' || dynamicStatus === selectedStatus ||
+        (selectedStatus === 'attention' && ATTENTION_STATUSES.includes(dynamicStatus))
       
       return matchesSearch && matchesCategory && matchesStatus
     })
@@ -601,44 +511,15 @@ function App() {
   
   const attentionCertificates = useMemo(() => {
     return activeCertificates
-      .map(cert => {
-        const dynamicStatus = getDynamicStatus(cert)
-
-        let displayExpiry = cert.expiryDate
-        let expiryHint = ''
-
-        if (needsAnnualRenewal(cert) && cert.issuanceDate) {
-          const issued = new Date(cert.issuanceDate)
-          const oneYearLater = new Date(issued)
-          oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
-          displayExpiry = oneYearLater.toISOString().split('T')[0]
-          expiryHint = '1yr refresh'
-        } else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
-          const issued = new Date(cert.issuanceDate)
-          const fiveYearsLater = new Date(issued)
-          fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
-          displayExpiry = fiveYearsLater.toISOString().split('T')[0]
-          expiryHint = '5yr unofficial'
-        } else if (isOptionalRenewalCert(cert) && cert.expiryDate) {
-          expiryHint = 'renew if useful'
-        }
-
-        return {
-          ...cert,
-          dynamicStatus,
-          displayExpiry,
-          expiryHint
-        }
-      })
-      .filter(cert => cert.dynamicStatus !== 'valid')
+      .map(cert => ({ ...cert, dynamicStatus: calculateStatus(cert) }))
+      .filter(cert => ATTENTION_STATUSES.includes(cert.dynamicStatus))
       .sort((a, b) => {
-        const priority = { expired: 0, expiring: 1, 'renewal-suggested': 2 }
-        const statusDelta = priority[a.dynamicStatus] - priority[b.dynamicStatus]
+        const statusDelta = ATTENTION_STATUSES.indexOf(a.dynamicStatus) - ATTENTION_STATUSES.indexOf(b.dynamicStatus)
         if (statusDelta !== 0) return statusDelta
-        if (!a.displayExpiry && !b.displayExpiry) return a.name.localeCompare(b.name)
-        if (!a.displayExpiry) return 1
-        if (!b.displayExpiry) return -1
-        return a.displayExpiry.localeCompare(b.displayExpiry)
+        if (!a.expiryDate && !b.expiryDate) return a.name.localeCompare(b.name)
+        if (!a.expiryDate) return 1
+        if (!b.expiryDate) return -1
+        return a.expiryDate.localeCompare(b.expiryDate)
       })
   }, [activeCertificates])
 
@@ -679,8 +560,8 @@ function App() {
   }
   
   // Count checked and flagged certificates
-  const checkedCount = Object.values(checkedCerts).filter(Boolean).length
-  const flaggedCount = Object.values(flaggedCerts).filter(Boolean).length
+  const checkedCount = activeCertificates.filter(cert => checkedCerts[cert.id]).length
+  const flaggedCount = activeCertificates.filter(cert => flaggedCerts[cert.id]).length
   
   const clearFilters = () => {
     setSearchQuery('')
@@ -688,51 +569,22 @@ function App() {
     setSelectedStatus('')
   }
   
-  // Download CSV function
+  // Export recorded dates, source evidence, and the user's local annotations.
   const downloadCSV = () => {
-    const headers = ['Category', 'Certificate Name', 'Certificate Number', 'Issuer', 'Issue Date', 'Expiry Date', 'Status', 'Checked']
-    
-    const rows = activeCertificates.map(cert => {
-      const dynamicStatus = getDynamicStatus(cert)
-      
-      // Calculate display expiry for derived-renewal certs
-      let displayExpiry = cert.expiryDate
-      if (isOptionalRenewalCert(cert)) {
-        displayExpiry = `${cert.expiryDate} (renew if useful)`
-      } else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
-        const issued = new Date(cert.issuanceDate)
-        const fiveYearsLater = new Date(issued)
-        fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
-        displayExpiry = fiveYearsLater.toISOString().split('T')[0] + ' (5yr unofficial)'
-      }
-      
-      return [
-        cert.category,
-        cert.name,
-        cert.certNumber || '',
-        cert.issuer,
-        cert.issuanceDate ? formatDate(cert.issuanceDate) : '',
-        displayExpiry ? formatDate(displayExpiry) : '',
-        dynamicStatus === 'renewal-suggested' ? 'Consider Renewal' : dynamicStatus,
-        checkedCerts[cert.id] ? 'Yes' : 'No'
-      ]
+    const csvContent = buildCertificatesCSV(activeCertificates, {
+      checked: checkedCerts, flagged: flaggedCerts, notes: certNotes,
     })
-    
-    // Sort by category
-    rows.sort((a, b) => a[0].localeCompare(b[0]))
-    
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n')
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const blob = new Blob(['\ufeff', csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
+    link.href = url
     link.download = `seafarer-certificates-${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
     link.click()
+    link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-  
+
   const hasActiveFilters = searchQuery || selectedCategory || selectedStatus
   
   // Show access gate if user hasn't acknowledged disclaimer
@@ -774,6 +626,9 @@ function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
+        <p className="text-xs sm:text-sm text-slate-600 mb-4">
+          Records checked against the supplied folder on 2 Oct 2026. File review does not confirm role or flag requirements.
+        </p>
         {/* Local Storage Notice */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
           <Info size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
@@ -784,25 +639,29 @@ function App() {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-8">
-          <StatsCard icon={BookOpen} label="Total Certificates" value={stats.total} color="bg-blue-500" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
+          <StatsCard icon={BookOpen} label="Total Records" value={stats.total} color="bg-blue-500" />
           <StatsCard icon={CheckCircle} label="Valid" value={stats.valid} color="bg-emerald-500" />
           <StatsCard icon={Clock} label="Expiring Soon" value={stats.expiring} color="bg-amber-500" />
           <StatsCard icon={AlertTriangle} label="Expired" value={stats.expired} color="bg-red-500" />
-          <StatsCard icon={RefreshCw} label="Consider Renewal" value={stats.renewalSuggested} color="bg-fuchsia-500" />
+          <StatsCard icon={RefreshCw} label="Consider Renewal" value={stats['renewal-suggested']} color="bg-fuchsia-500" />
+          <StatsCard icon={Info} label="Needs Review" value={stats.review} color="bg-orange-500" />
+          <StatsCard icon={FileText} label="No Expiry Stated" value={stats['no-expiry-stated']} color="bg-slate-500" />
+          <StatsCard icon={BookOpen} label="Historical Records" value={stats.historical} color="bg-gray-500" />
         </div>
 
         {attentionCertificates.length > 0 && (
           <div className="bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200 rounded-xl p-4 mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Certificates needing attention</h2>
-                <p className="text-xs sm:text-sm text-gray-600">Same list now surfaced in the Black Code dashboard.</p>
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">Records needing attention</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Recorded expiries and unresolved document details. Open an item for the document details.</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap text-xs">
                 <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">Expired {stats.expired}</span>
                 <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Expiring {stats.expiring}</span>
-                <span className="px-2 py-1 rounded-full bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200">Renewal {stats.renewalSuggested}</span>
+                <span className="px-2 py-1 rounded-full bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200">Renewal {stats['renewal-suggested']}</span>
+                <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 border border-orange-200">Review {stats.review}</span>
               </div>
             </div>
 
@@ -817,12 +676,9 @@ function App() {
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{cert.name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">{cert.category} • {cert.issuer}</p>
-                      {cert.displayExpiry && (
-                        <p className="text-xs text-gray-600 mt-1">
-                          Due: {formatDate(cert.displayExpiry)}
-                          {cert.expiryHint ? ` (${cert.expiryHint})` : ''}
-                        </p>
-                      )}
+                      <p className="text-xs text-gray-600 mt-1">
+                        {cert.expiryDate ? `Recorded expiry: ${formatDate(cert.expiryDate)}` : getStatusNote(cert, cert.dynamicStatus)}
+                      </p>
                     </div>
                     <div className="flex-shrink-0">
                       <StatusBadge status={cert.dynamicStatus} />
@@ -831,6 +687,14 @@ function App() {
                 </button>
               ))}
             </div>
+            {attentionCertificates.length > 8 && (
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedCategory(''); setSelectedStatus('attention') }}
+                className="mt-3 text-sm font-medium text-blue-700 hover:underline"
+              >
+                View all {attentionCertificates.length} items needing attention in the table
+              </button>
+            )}
           </div>
         )}
 
@@ -842,7 +706,7 @@ function App() {
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search certificates by name, issuer, category, or cert number..."
+                placeholder="Search records by name, issuer, category, or cert number..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-gray-900 placeholder-gray-400"
@@ -860,7 +724,8 @@ function App() {
               />
               <FilterDropdown
                 label="Status"
-                options={['valid', 'expiring', 'expired', 'renewal-suggested']}
+                options={['attention', ...Object.keys(STATUS_LABELS)]}
+                labels={{ attention: 'Needs Attention', ...STATUS_LABELS }}
                 value={selectedStatus}
                 onChange={setSelectedStatus}
               />
@@ -879,7 +744,7 @@ function App() {
           {/* Results count */}
           <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              Showing <span className="font-medium text-gray-900">{filteredCertificates.length}</span> of {certificates.length} certificates
+              Showing <span className="font-medium text-gray-900">{filteredCertificates.length}</span> of {certificates.length} records
             </p>
           </div>
         </div>
@@ -904,7 +769,7 @@ function App() {
                       Cert #
                     </th>
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24 sm:w-32 hidden lg:table-cell">
-                      Issued
+                      Issued / completed
                     </th>
                     <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-24 sm:w-32 hidden sm:table-cell">
                       Expires
@@ -937,31 +802,7 @@ function App() {
                           const isChecked = checkedCerts[cert.id] || false
                           const isFlagged = flaggedCerts[cert.id] || false
                           const note = certNotes[cert.id] || ''
-                          const dynamicStatus = getDynamicStatus(cert)
-                          
-                          // Calculate expiry display
-                          let displayExpiry = cert.expiryDate
-                          let isUnofficialExpiry = false
-                          let expiryNote = ''
-                          
-                          // For annual renewal certs (IAATO, AECO, Svalbard)
-                          if (needsAnnualRenewal(cert) && cert.issuanceDate) {
-                            const issued = new Date(cert.issuanceDate)
-                            const oneYearLater = new Date(issued)
-                            oneYearLater.setFullYear(oneYearLater.getFullYear() + 1)
-                            displayExpiry = oneYearLater.toISOString().split('T')[0]
-                            isUnofficialExpiry = true
-                            expiryNote = '1yr'
-                          }
-                          // For STCW certs without expiry
-                          else if (cert.category === 'STCW' && !cert.expiryDate && cert.issuanceDate) {
-                            const issued = new Date(cert.issuanceDate)
-                            const fiveYearsLater = new Date(issued)
-                            fiveYearsLater.setFullYear(fiveYearsLater.getFullYear() + 5)
-                            displayExpiry = fiveYearsLater.toISOString().split('T')[0]
-                            isUnofficialExpiry = true
-                            expiryNote = '5yr'
-                          }
+                          const dynamicStatus = calculateStatus(cert)
                           
                           return (
                             <tr 
@@ -998,6 +839,13 @@ function App() {
                                   {cert.subcategory && (
                                     <p className="text-xs text-gray-500 mt-0.5 hidden sm:block">{cert.subcategory}</p>
                                   )}
+                                  {cert.sourceUrl && (
+                                    <a href={cert.sourceUrl} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-xs text-blue-700 hover:underline mt-1">
+                                      <ExternalLink size={12} /> Open file
+                                    </a>
+                                  )}
+                                  {cert.sourceMissing && <p className="text-xs text-orange-800 mt-1">Source file missing</p>}
                                   {note && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <MessageSquare size={10} /> {note.length > 30 ? note.substring(0, 30) + '...' : note}
@@ -1019,11 +867,9 @@ function App() {
                                 <span className={`text-xs sm:text-sm ${
                                   dynamicStatus === 'expired' ? 'text-red-600 font-medium' :
                                   dynamicStatus === 'expiring' ? 'text-amber-600 font-medium' :
-                                  isUnofficialExpiry ? 'text-fuchsia-600 font-medium italic' :
                                   'text-gray-600'
                                 }`}>
-                                  {displayExpiry ? formatDate(displayExpiry) : '—'}
-                                  {isUnofficialExpiry && <span className="text-xs ml-1">({expiryNote})</span>}
+                                  {getExpiryLabel(cert)}
                                 </span>
                               </td>
                               <td className="px-2 sm:px-4 py-2 sm:py-3">
@@ -1053,7 +899,7 @@ function App() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
               <Search size={24} className="text-gray-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No certificates found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No records found</h3>
             <p className="text-gray-500 mb-4">Try adjusting your search or filter criteria</p>
             <button
               onClick={clearFilters}
@@ -1066,14 +912,15 @@ function App() {
       </main>
 
       {/* Certificate Modal - View Only */}
-      <CertificateModal 
+      {selectedCertificate && <CertificateModal
+        key={selectedCertificate.id}
         certificate={selectedCertificate} 
         onClose={() => setSelectedCertificate(null)}
         isFlagged={selectedCertificate ? flaggedCerts[selectedCertificate.id] : false}
         note={selectedCertificate ? certNotes[selectedCertificate.id] : ''}
         onToggleFlag={toggleFlag}
         onUpdateNote={updateNote}
-      />
+      />}
     </div>
   )
 }
