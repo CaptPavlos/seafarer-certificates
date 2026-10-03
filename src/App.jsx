@@ -136,6 +136,7 @@ const StatusBadge = ({ status }) => {
     'renewal-suggested': { bg: 'bg-fuchsia-100', text: 'text-fuchsia-700', icon: RefreshCw, label: 'Consider Renewal' },
     review: { bg: 'bg-orange-100', text: 'text-orange-800', icon: Info, label: 'Needs Review' },
     'no-expiry-stated': { bg: 'bg-slate-100', text: 'text-slate-700', icon: FileText, label: 'No Expiry Stated' },
+    'no-action-required': { bg: 'bg-slate-100', text: 'text-slate-700', icon: CheckCircle, label: 'No Action Needed' },
     historical: { bg: 'bg-gray-100', text: 'text-gray-600', icon: BookOpen, label: 'Historical Record' }
   }
   
@@ -328,6 +329,7 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
             )}
             {certificate.file && <p className="text-xs text-slate-500 break-words">Source: {certificate.file}</p>}
             {certificate.verifiedAt && <p className="text-xs text-slate-500">Source checked: {formatDate(certificate.verifiedAt)}</p>}
+            {certificate.ownerConfirmedAt && <p className="text-xs text-slate-500">Tracking preference confirmed: {formatDate(certificate.ownerConfirmedAt)}</p>}
             {certificate.sourceUrl && (
               <a href={certificate.sourceUrl} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:underline">
@@ -628,6 +630,7 @@ function App() {
       <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-8">
         <p className="text-xs sm:text-sm text-slate-600 mb-4">
           Records checked against the supplied folder on 2 Oct 2026. File review does not confirm role or flag requirements.
+          {' '}Tracking preferences updated on 3 Oct 2026.
         </p>
         {/* Local Storage Notice */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
@@ -639,7 +642,7 @@ function App() {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-8">
           <StatsCard icon={BookOpen} label="Total Records" value={stats.total} color="bg-blue-500" />
           <StatsCard icon={CheckCircle} label="Valid" value={stats.valid} color="bg-emerald-500" />
           <StatsCard icon={Clock} label="Expiring Soon" value={stats.expiring} color="bg-amber-500" />
@@ -647,6 +650,7 @@ function App() {
           <StatsCard icon={RefreshCw} label="Consider Renewal" value={stats['renewal-suggested']} color="bg-fuchsia-500" />
           <StatsCard icon={Info} label="Needs Review" value={stats.review} color="bg-orange-500" />
           <StatsCard icon={FileText} label="No Expiry Stated" value={stats['no-expiry-stated']} color="bg-slate-500" />
+          <StatsCard icon={CheckCircle} label="No Action Needed" value={stats['no-action-required']} color="bg-slate-500" />
           <StatsCard icon={BookOpen} label="Historical Records" value={stats.historical} color="bg-gray-500" />
         </div>
 

@@ -52,22 +52,6 @@ export const certificates = [
     "guidanceUrl": "https://www.who.int/docs/default-source/documents/emergencies/travel-advice/extension-to-life-on-yellow-fever-vaccination-en.pdf"
   },
   {
-    "id": 4,
-    "name": "CV Filippakis Pavlos - Master Unlimited",
-    "category": "General",
-    "subcategory": null,
-    "issuer": "Not verified",
-    "holder": "Pavlos Angelos Filippakis",
-    "file": "Pavlos Angelos Filippakis - Master Unlimited.pdf",
-    "path": "Certificates/Pavlos Angelos Filippakis - Master Unlimited.pdf",
-    "certNumber": null,
-    "issuanceDate": null,
-    "expiryDate": null,
-    "validityType": "expiry_unknown",
-    "sourceMissing": true,
-    "reviewNote": "This CV was listed in the previous app but was not found in the supplied folder or its subfolders on 2 October 2026. Add the current CV or confirm that it should be retired."
-  },
-  {
     "id": 5,
     "name": "Cayman Islands Master Endorsement",
     "category": "CoC & Endorsements",
@@ -355,7 +339,9 @@ export const certificates = [
     "notes": "Not obligatory for current work - no renewal needed",
     "validityType": "dated",
     "verifiedAt": "2026-10-02",
-    "reviewNote": "Printed expiry: 24 February 2026. Previous tracker classifies this qualification as optional for current work; that preference is retained. The certificate itself is past its printed expiry."
+    "reviewNote": "No replacement or renewal needed for current tracking following recent CoROM REMT attendance, confirmed by the owner on 3 October 2026. The printed expiry of 24 February 2026 is retained for reference.",
+    "attentionPolicy": "none",
+    "ownerConfirmedAt": "2026-10-03"
   },
   {
     "id": 23,
@@ -373,7 +359,9 @@ export const certificates = [
     "notes": "Not obligatory for current work - no renewal needed",
     "validityType": "dated",
     "verifiedAt": "2026-10-02",
-    "reviewNote": "Printed expiry: 24 February 2025. Previous tracker classifies this qualification as optional for current work; that preference is retained. The certificate itself is past its printed expiry."
+    "reviewNote": "No replacement or renewal needed for current tracking following recent CoROM REMT attendance, confirmed by the owner on 3 October 2026. The printed expiry of 24 February 2025 is retained for reference.",
+    "attentionPolicy": "none",
+    "ownerConfirmedAt": "2026-10-03"
   },
   {
     "id": 24,
@@ -389,7 +377,8 @@ export const certificates = [
     "expiryDate": null,
     "validityType": "no_expiry_stated",
     "verifiedAt": "2026-10-02",
-    "reviewNote": "CoROM certificate of evidence for 50 hours of continuing professional development, completed 13 September 2025. No expiry is printed. This document is CPD evidence, not a separate professional licence."
+    "reviewNote": "CoROM certificate of evidence for 50 hours of continuing professional development, completed 13 September 2025. No expiry is printed. On 3 October 2026, the owner confirmed recent CoROM REMT attendance as the reason no replacement of the older non-STCW medical certificates is needed.",
+    "ownerConfirmedAt": "2026-10-03"
   },
   {
     "id": 25,
@@ -484,11 +473,12 @@ export const certificates = [
     "certNumber": "GT20678",
     "issuanceDate": null,
     "expiryDate": null,
-    "validityType": "expiry_unknown",
+    "validityType": "no_expiry_stated",
     "verifiedAt": "2026-10-02",
     "issuanceDateText": "March 2022",
-    "reviewRequired": true,
-    "reviewNote": "The source prints March 2022 only; no issue day is given. Validity is conditional on Gaslog employment and the Total Care Contract. Confirm these conditions before relying on it as current authorization."
+    "reviewNote": "No renewal needed, confirmed by the owner on 3 October 2026. The source prints March 2022 and employment/contract conditions; retained as training evidence without a renewal or review prompt.",
+    "attentionPolicy": "none",
+    "ownerConfirmedAt": "2026-10-03"
   },
   {
     "id": 31,
@@ -584,7 +574,9 @@ export const certificates = [
     "expiryDate": "2023-09-17",
     "validityType": "dated",
     "verifiedAt": "2026-10-02",
-    "reviewNote": "Temporary permission issued 19 July 2023, valid only until 17 September 2023. The final speedboat licence was not found. The 24m scope in the filename is not stated in this document."
+    "reviewNote": "No replacement alert, as requested by the owner on 3 October 2026: the government cannot currently replace the speedboat licence. The document’s printed expiry of 17 September 2023 is retained for reference.",
+    "attentionPolicy": "none",
+    "ownerConfirmedAt": "2026-10-03"
   },
   {
     "id": 37,
@@ -804,5 +796,5 @@ export const getStats = (asOf = new Date()) => {
     const status = calculateStatus(cert, asOf);
     counts[status] = (counts[status] || 0) + 1;
   }
-  return { total: certificates.length, valid: counts.valid || 0, expiring: counts.expiring || 0, expired: counts.expired || 0, renewalSuggested: counts['renewal-suggested'] || 0, review: counts.review || 0, noExpiryStated: counts['no-expiry-stated'] || 0, historical: counts.historical || 0 };
+  return { total: certificates.length, valid: counts.valid || 0, expiring: counts.expiring || 0, expired: counts.expired || 0, renewalSuggested: counts['renewal-suggested'] || 0, review: counts.review || 0, noExpiryStated: counts['no-expiry-stated'] || 0, historical: counts.historical || 0, noActionRequired: counts['no-action-required'] || 0 };
 };

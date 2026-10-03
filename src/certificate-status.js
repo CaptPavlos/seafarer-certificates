@@ -8,6 +8,7 @@ export const STATUS_LABELS = {
   'renewal-suggested': 'Consider Renewal',
   review: 'Needs Review',
   'no-expiry-stated': 'No Expiry Stated',
+  'no-action-required': 'No Action Needed',
   historical: 'Historical Record',
 }
 
@@ -44,6 +45,9 @@ export const calculateStatus = (cert, asOf = new Date()) => {
   if ((cert.issuanceDate && !issued) || (cert.expiryDate && !expiry)) return 'review'
   if (issued && (issued > today || (expiry && issued > expiry))) return 'review'
 
+  // Owner-confirmed tracking decisions do not alter the document's printed dates.
+  if (cert.attentionPolicy === 'none') return 'no-action-required'
+
   if (expiry) {
     const soon = expiry.getTime() <= today.getTime() + 182 * DAY_MS
     if (isOptionalRenewalCert(cert) && soon) return 'renewal-suggested'
@@ -71,6 +75,7 @@ export const getStatusNote = (cert, status = calculateStatus(cert)) => {
   if (status === 'renewal-suggested') return 'Optional renewal reminder based on the recorded expiry date.'
   if (status === 'no-expiry-stated') return 'No expiry date is stated. Any role-specific renewal requirement should be confirmed.'
   if (status === 'historical') return 'Kept for reference; this record does not confirm current eligibility.'
+  if (status === 'no-action-required') return 'No renewal or replacement action is tracked for this record.'
   return ''
 }
 

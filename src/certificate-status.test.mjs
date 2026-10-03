@@ -49,6 +49,21 @@ test('invalid and contradictory dates need review, and formatting is timezone-st
   assert.equal(formatDate('2026-02-30'), '—')
 })
 
+test('owner-confirmed no-action records retain printed dates without renewal or expiry alerts', () => {
+  const record = { ...cert, name: 'FPOS', obligatory: false, expiryDate: '2025-01-01',
+    attentionPolicy: 'none', ownerConfirmedAt: '2026-10-03',
+    reviewNote: 'No replacement needed following CoROM REMT attendance, confirmed 3 October 2026.' }
+  assert.equal(calculateStatus(record, '2026-10-03'), 'no-action-required')
+  assert.equal(getExpiryLabel(record), 'Jan 1, 2025')
+  const csv = buildCertificatesCSV([record], {}, '2026-10-03')
+  assert.ok(csv.includes('"2025-01-01"'))
+  assert.ok(csv.includes('"No Action Needed"'))
+  assert.ok(csv.includes(record.reviewNote))
+  assert.equal(calculateStatus({ ...record, name: 'Speedboat permit', obligatory: true }, today), 'no-action-required')
+  assert.equal(calculateStatus({ ...record, name: 'Dräger', expiryDate: null }, today), 'no-action-required')
+  assert.equal(calculateStatus({ ...record, sourceMissing: true }, today), 'review')
+})
+
 test('CSV keeps actual dates, source evidence, quoted notes and annotation state', () => {
   const record = { ...cert, name: 'FPOS', expiryDate: '2025-01-01',
     file: 'FPOS.pdf', sourceUrl: 'https://drive.google.com/file/d/example/view', verifiedAt: today }
