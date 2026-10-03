@@ -12,7 +12,7 @@ export const STATUS_LABELS = {
   historical: 'Historical Record',
 }
 
-export const ATTENTION_STATUSES = ['expired', 'expiring', 'review', 'renewal-suggested']
+export const isMissingFromFolder = (cert) => cert.sourceMissing === true
 
 // Read a printed calendar date without allowing timezone shifts or invalid dates.
 export const parseDateOnly = (value) => {
@@ -32,7 +32,7 @@ export const isOptionalRenewalCert = (cert) =>
   cert.obligatory === false || OPTIONAL_RENEWAL_NAMES.some(name => cert.name?.includes(name))
 
 export const calculateStatus = (cert, asOf = new Date()) => {
-  if (cert.sourceMissing) return 'review'
+  if (isMissingFromFolder(cert)) return 'review'
   if (cert.validityType === 'historical') return 'historical'
   if (cert.reviewRequired) return 'review'
 
@@ -70,7 +70,7 @@ export const getExpiryLabel = (cert) => {
 
 export const getStatusNote = (cert, status = calculateStatus(cert)) => {
   if (cert.reviewNote) return cert.reviewNote
-  if (cert.sourceMissing) return 'The source file was not found in the audited folder.'
+  if (isMissingFromFolder(cert)) return 'The source file was not found in the audited folder.'
   if (status === 'review') return 'Confirm the dates and validity from the source document.'
   if (status === 'renewal-suggested') return 'Optional renewal reminder based on the recorded expiry date.'
   if (status === 'no-expiry-stated') return 'No expiry date is stated. Any role-specific renewal requirement should be confirmed.'
@@ -94,7 +94,7 @@ export const buildCertificatesCSV = (certificates, annotations = {}, asOf = new 
     const status = calculateStatus(cert, asOf)
     return [cert.category, cert.name, cert.certNumber, cert.issuer, cert.issuanceDate,
       cert.expiryDate, cert.validityType, STATUS_LABELS[status], cert.file,
-      cert.sourceUrl, cert.verifiedAt, cert.sourceMissing ? 'Yes' : 'No',
+      cert.sourceUrl, cert.verifiedAt, isMissingFromFolder(cert) ? 'Yes' : 'No',
       getStatusNote(cert, status), checked[cert.id] ? 'Yes' : 'No',
       flagged[cert.id] ? 'Yes' : 'No', notes[cert.id]]
   })

@@ -445,23 +445,6 @@ export const certificates = [
     "reviewNote": "Svalbard 2024. Field Staff Online Assessment. Date 02-Aug-2024. No expiry printed."
   },
   {
-    "id": 29,
-    "name": "Close Protection Course Report - award unconfirmed",
-    "category": "Non-STCW",
-    "subcategory": "Specializations",
-    "issuer": "Ronin Protective Services CC",
-    "holder": "Pavlos Angelos Filippakis",
-    "file": "Close Protection Officer Course - 2022.pdf",
-    "path": "Certificates/Non-STCW Certs/Specializations/Close Protection Officer Course - 2022.pdf",
-    "certNumber": null,
-    "issuanceDate": "2022-05-13",
-    "expiryDate": null,
-    "validityType": "expiry_unknown",
-    "verifiedAt": "2026-10-02",
-    "reviewRequired": true,
-    "reviewNote": "The supplied document is a course report, not an issued qualification. Obtain the final awarded certificate if one was subsequently issued."
-  },
-  {
     "id": 30,
     "name": "Draeger Gas Detectors Training",
     "category": "Non-STCW",

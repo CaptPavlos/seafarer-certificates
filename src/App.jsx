@@ -27,7 +27,7 @@ import {
   Info
 } from 'lucide-react'
 import { certificates, categories } from './data/certificates'
-import { ATTENTION_STATUSES, STATUS_LABELS, buildCertificatesCSV, calculateStatus, formatDate, getExpiryLabel, getStatusNote } from './certificate-status'
+import { STATUS_LABELS, buildCertificatesCSV, calculateStatus, formatDate, getExpiryLabel, getStatusNote, isMissingFromFolder } from './certificate-status'
 
 // Local storage keys - checkmarks, flags, and notes are saved locally
 const STORAGE_KEY = 'seafarer-certificates-checked'
@@ -336,7 +336,7 @@ const CertificateModal = ({ certificate, onClose, isFlagged, note, onToggleFlag,
                 <ExternalLink size={14} /> Open file
               </a>
             )}
-            {certificate.sourceMissing && <p className="text-sm text-orange-800">Source file missing from the audited folder.</p>}
+            {isMissingFromFolder(certificate) && <p className="text-sm text-orange-800">Source file not found in the audited certificate folder.</p>}
           </div>
           <div className="space-y-3">
             <div>
@@ -505,24 +505,16 @@ function App() {
       
       const matchesCategory = selectedCategory === '' || cert.category === selectedCategory
       const matchesStatus = selectedStatus === '' || dynamicStatus === selectedStatus ||
-        (selectedStatus === 'attention' && ATTENTION_STATUSES.includes(dynamicStatus))
+        (selectedStatus === 'missing' && isMissingFromFolder(cert))
       
       return matchesSearch && matchesCategory && matchesStatus
     })
   }, [searchQuery, selectedCategory, selectedStatus, activeCertificates])
   
-  const attentionCertificates = useMemo(() => {
+  const missingCertificates = useMemo(() => {
     return activeCertificates
-      .map(cert => ({ ...cert, dynamicStatus: calculateStatus(cert) }))
-      .filter(cert => ATTENTION_STATUSES.includes(cert.dynamicStatus))
-      .sort((a, b) => {
-        const statusDelta = ATTENTION_STATUSES.indexOf(a.dynamicStatus) - ATTENTION_STATUSES.indexOf(b.dynamicStatus)
-        if (statusDelta !== 0) return statusDelta
-        if (!a.expiryDate && !b.expiryDate) return a.name.localeCompare(b.name)
-        if (!a.expiryDate) return 1
-        if (!b.expiryDate) return -1
-        return a.expiryDate.localeCompare(b.expiryDate)
-      })
+      .filter(isMissingFromFolder)
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [activeCertificates])
 
   // Group certificates by category - must be before conditional return
@@ -654,53 +646,37 @@ function App() {
           <StatsCard icon={BookOpen} label="Historical Records" value={stats.historical} color="bg-gray-500" />
         </div>
 
-        {attentionCertificates.length > 0 && (
-          <div className="bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200 rounded-xl p-4 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-gray-900">Records needing attention</h2>
-                <p className="text-xs sm:text-sm text-gray-600">Recorded expiries and unresolved document details. Open an item for the document details.</p>
+        <div className={`border rounded-xl p-4 mb-6 ${missingCertificates.length ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
+          <h2 className="text-base sm:text-lg font-bold text-gray-900">Missing from certificate folder</h2>
+          {missingCertificates.length === 0 ? (
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">No tracked records are missing from the audited certificate folder.</p>
+          ) : (
+            <>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1 mb-3">{missingCertificates.length} tracked {missingCertificates.length === 1 ? 'record has' : 'records have'} no source file in the audited certificate folder.</p>
+              <div className="space-y-2">
+                {missingCertificates.slice(0, 8).map(cert => (
+                  <button
+                    key={cert.id}
+                    onClick={() => setSelectedCertificate(cert)}
+                    className="w-full text-left bg-white/90 hover:bg-white rounded-lg border border-amber-100 px-3 py-3 transition-colors"
+                  >
+                    <p className="font-medium text-gray-900 text-sm">{cert.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{cert.category} • {cert.issuer}</p>
+                    <p className="text-xs text-orange-800 mt-1">Source file not found</p>
+                  </button>
+                ))}
               </div>
-              <div className="flex items-center gap-2 flex-wrap text-xs">
-                <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200">Expired {stats.expired}</span>
-                <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">Expiring {stats.expiring}</span>
-                <span className="px-2 py-1 rounded-full bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200">Renewal {stats['renewal-suggested']}</span>
-                <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-800 border border-orange-200">Review {stats.review}</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {attentionCertificates.slice(0, 8).map(cert => (
+              {missingCertificates.length > 8 && (
                 <button
-                  key={cert.id}
-                  onClick={() => setSelectedCertificate(cert)}
-                  className="w-full text-left bg-white/90 hover:bg-white rounded-lg border border-fuchsia-100 px-3 py-3 transition-colors"
+                  onClick={() => { setSearchQuery(''); setSelectedCategory(''); setSelectedStatus('missing') }}
+                  className="mt-3 text-sm font-medium text-blue-700 hover:underline"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-gray-900 text-sm">{cert.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{cert.category} • {cert.issuer}</p>
-                      <p className="text-xs text-gray-600 mt-1">
-                        {cert.expiryDate ? `Recorded expiry: ${formatDate(cert.expiryDate)}` : getStatusNote(cert, cert.dynamicStatus)}
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <StatusBadge status={cert.dynamicStatus} />
-                    </div>
-                  </div>
+                  View all {missingCertificates.length} missing records in the table
                 </button>
-              ))}
-            </div>
-            {attentionCertificates.length > 8 && (
-              <button
-                onClick={() => { setSearchQuery(''); setSelectedCategory(''); setSelectedStatus('attention') }}
-                className="mt-3 text-sm font-medium text-blue-700 hover:underline"
-              >
-                View all {attentionCertificates.length} items needing attention in the table
-              </button>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
 
         {/* Search and Filters */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 mb-6">
@@ -728,8 +704,8 @@ function App() {
               />
               <FilterDropdown
                 label="Status"
-                options={['attention', ...Object.keys(STATUS_LABELS)]}
-                labels={{ attention: 'Needs Attention', ...STATUS_LABELS }}
+                options={['missing', ...Object.keys(STATUS_LABELS)]}
+                labels={{ missing: 'Missing from certificate folder', ...STATUS_LABELS }}
                 value={selectedStatus}
                 onChange={setSelectedStatus}
               />
@@ -849,7 +825,7 @@ function App() {
                                       <ExternalLink size={12} /> Open file
                                     </a>
                                   )}
-                                  {cert.sourceMissing && <p className="text-xs text-orange-800 mt-1">Source file missing</p>}
+                                  {isMissingFromFolder(cert) && <p className="text-xs text-orange-800 mt-1">Source file not found</p>}
                                   {note && (
                                     <p className="text-xs text-blue-600 mt-0.5 flex items-center gap-1">
                                       <MessageSquare size={10} /> {note.length > 30 ? note.substring(0, 30) + '...' : note}

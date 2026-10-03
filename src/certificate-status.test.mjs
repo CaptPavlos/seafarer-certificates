@@ -1,9 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calculateStatus, formatDate, getExpiryLabel, buildCertificatesCSV } from './certificate-status.js'
+import { calculateStatus, formatDate, getExpiryLabel, buildCertificatesCSV, isMissingFromFolder } from './certificate-status.js'
 
 const today = '2026-10-02'
 const cert = { id: 1, name: 'Training certificate', category: 'STCW', issuanceDate: '2015-01-01' }
+
+test('missing-folder flags only identify explicitly absent files, regardless of document status', () => {
+  const records = [
+    { ...cert, id: 1, expiryDate: '2025-01-01', sourceMissing: false },
+    { ...cert, id: 2, reviewRequired: true, sourceMissing: false },
+    { ...cert, id: 3, validityType: 'expiry_unknown' },
+    { ...cert, id: 4, name: 'FPOS', expiryDate: '2025-01-01' },
+    { ...cert, id: 5, sourceMissing: true, attentionPolicy: 'none' },
+  ]
+  assert.deepEqual(records.filter(isMissingFromFolder).map(record => record.id), [5])
+  assert.equal(calculateStatus(records[0], today), 'expired')
+  assert.equal(calculateStatus(records[1], today), 'review')
+  assert.equal(isMissingFromFolder({ ...cert, sourceMissing: 'false' }), false)
+})
 
 test('printed expiries use calendar-day boundaries and the six-month attention window', () => {
   assert.equal(calculateStatus({ ...cert, expiryDate: '2026-10-01' }, today), 'expired')
